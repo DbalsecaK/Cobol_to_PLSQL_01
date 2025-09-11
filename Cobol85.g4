@@ -25,10 +25,10 @@ grammar Cobol85;
 //options { caseInsensitive = true; }
 
 startRule
-    : compilationUnit EOF
+    : compilationUnit EOF   
     ;
 
-compilationUnit
+compilationUnits recueP  com
     : programUnit+
     ;
 
