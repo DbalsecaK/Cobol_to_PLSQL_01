@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+out/
+*.log
+*.tmp
+
+# ANTLR generated files (optional - you might want to keep these)
+# Cobol85Lexer.py
+# Cobol85Parser.py
+# Cobol85Listener.py
+# Cobol85.interp
+# Cobol85.tokens
+
+# Test files
+test_*.py
+*_test.py

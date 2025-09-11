@@ -1,0 +1,4 @@
+python antlr_converter.py samples/SENTENCIA_IF.cob
+python batch_converter.py
+P2_IF2
+java -jar C:\antlr\antlr-4.13.1-complete.jar -Dlanguage=Python3 Cobol85.g4
