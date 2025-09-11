@@ -22,7 +22,7 @@
 
 grammar Cobol85;
 
-//options { caseInsensitive = true; }
+//options { caseInsensitive = true; } DOUBLEASTERISKCHAR
 
 startRule
     : compilationUnit EOF   
