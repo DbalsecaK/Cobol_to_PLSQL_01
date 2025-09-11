@@ -556,7 +556,7 @@ def main():
             json.dump({"program": ir["program"], "coverage": coverage, "method": "ANTLR"}, f, indent=2)
 
         # Actualizar README con información de IR
-        update_readme_with_ir_info([ir_file])
+        update_readme_with_ir_info([ir_file])}
 
         print("✅ Archivos generados:")
         print(f"   📊 IR: {ir_file}")
