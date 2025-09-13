@@ -331,9 +331,8 @@ def declare_var(name: str, vtype: str, size: int) -> str:
     else:
         return f"  {name} NUMBER({size});"
 
-def generate_package(ir: Dict) -> tuple:
+def generate_package(ir: Dict, package_name: str) -> tuple:
     """Generar paquete PL/SQL"""
-    program = ir.get("program", "COBOL_PROGRAM")
     vars_decl = [declare_var(v["name"], v["type"], v["size"]) for v in ir.get("variables", [])]
 
     coverage = {"rules":0, "gaps":0}
@@ -350,13 +349,13 @@ def generate_package(ir: Dict) -> tuple:
     vars_decl_str = '\n'.join(vars_decl)
     lines_str = '\n'.join(lines)
     
-    body = f"""CREATE OR REPLACE PACKAGE BODY {program} IS
+    body = f"""CREATE OR REPLACE PACKAGE BODY {package_name} IS
   PROCEDURE MAIN IS
 {vars_decl_str}
   BEGIN
 {lines_str}
   END MAIN;
-END {program};
+END {package_name};
 /"""
     return body, coverage
 
@@ -373,6 +372,9 @@ def main():
         print(f"📁 Archivo: {cob_path}")
         print("=" * 50)
         
+        # Extraer nombre base del archivo (sin extensión)
+        base_name = os.path.splitext(os.path.basename(cob_path))[0]
+        
         ir = parse_cobol_to_ir(cob_path)
         print(f"📋 Programa: {ir['program']}")
         print(f"📊 Variables: {len(ir['variables'])}")
@@ -381,23 +383,26 @@ def main():
         # Guardar IR en archivo JSON
         out_dir = os.path.join(os.path.dirname(__file__), "out")
         os.makedirs(out_dir, exist_ok=True)
-        ir_file = os.path.join(out_dir, f"{ir['program']}_improved_ir.json")
+        ir_file = os.path.join(out_dir, f"{base_name}_ir.json")
+        
+        # Actualizar el nombre del programa en el IR
+        ir["program"] = base_name
         
         with open(ir_file, 'w', encoding='utf-8') as f:
             json.dump(ir, f, indent=2, ensure_ascii=False)
         print(f"💾 IR guardada en: {ir_file}")
         
         print("\n🔄 Generando PL/SQL...")
-        plsql, coverage = generate_package(ir)
+        plsql, coverage = generate_package(ir, base_name)
         
-        pkg_path = os.path.join(out_dir, f"{ir['program']}_improved.sql")
+        pkg_path = os.path.join(out_dir, f"{base_name}.sql")
         
         with open(pkg_path, "w", encoding="utf-8") as f:
             f.write(plsql)
 
-        rep_path = os.path.join(out_dir, f"{ir['program']}_improved_report.json")
+        rep_path = os.path.join(out_dir, f"{base_name}_report.json")
         with open(rep_path, "w", encoding="utf-8") as f:
-            json.dump({"program": ir["program"], "coverage": coverage, "method": "IMPROVED"}, f, indent=2)
+            json.dump({"program": base_name, "coverage": coverage, "method": "IMPROVED"}, f, indent=2)
 
         print("✅ Archivos generados:")
         print(f"   📊 IR: {ir_file}")
