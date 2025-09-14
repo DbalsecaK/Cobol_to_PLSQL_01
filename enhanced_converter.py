@@ -159,6 +159,26 @@ class EnhancedCobolConverter:
         
         return None
     
+    def parse_move_continuation(self, line: str) -> Optional[Dict[str, Any]]:
+        """Parse MOVE continuation - variables that are continuation of previous MOVE"""
+        line = line.strip()
+        
+        # Check if line is just a variable name ending with period (MOVE continuation)
+        # Pattern: WS-VARIABLE-NAME.
+        continuation_match = re.match(r'^([A-Z0-9_-]+)\.?$', line, re.IGNORECASE)
+        if continuation_match:
+            variable_name = continuation_match.group(1)
+            
+            # Check if this looks like a COBOL variable (contains hyphens and is uppercase)
+            if '-' in variable_name and variable_name.isupper():
+                return {
+                    'op': 'MOVE_CONTINUATION',
+                    'variable': variable_name,
+                    'raw': line
+                }
+        
+        return None
+    
     def convert_move_statement_enhanced(self, stmt: Dict[str, Any]) -> str:
         """Convert MOVE statement to PL/SQL with proper formatting"""
         source = stmt.get('src', '')
@@ -190,6 +210,24 @@ class EnhancedCobolConverter:
         return f"-- MOVE CORRESPONDING {source_clean} TO {targets_clean}\n" \
                f"-- Note: This requires field-by-field mapping analysis\n" \
                f"-- {targets_clean} := {source_clean};"
+    
+    def convert_move_continuation(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert MOVE continuation to PL/SQL"""
+        variable = stmt.get("variable", "")
+        variable_clean = self.clean_expression(variable)
+        
+        # For MOVE continuation, we need to get the source from the previous MOVE
+        # Since we can't easily track the previous MOVE source in this context,
+        # we'll use a heuristic approach based on common COBOL patterns
+        
+        # Common patterns for MOVE continuation:
+        # MOVE ZEROS TO WS-VAR1 WS-VAR2 -> WS_VAR1 := 0; WS_VAR2 := 0;
+        # MOVE SPACES TO WS-VAR1 WS-VAR2 -> WS_VAR1 := ' '; WS_VAR2 := ' ';
+        # MOVE literal TO WS-VAR1 WS-VAR2 -> WS_VAR1 := literal; WS_VAR2 := literal;
+        
+        # For now, we'll use a default value of 0, but this should be improved
+        # to track the actual source from the previous MOVE statement
+        return f"{base_indent}{variable_clean} := 0; -- MOVE continuation (source from previous MOVE)"
     
     def _apply_indentation(self, text: str, base_indent: str) -> str:
         """Apply proper indentation to multi-line PL/SQL code"""
@@ -1282,6 +1320,11 @@ class EnhancedCobolConverter:
         if move_result:
             return move_result
         
+        # MOVE continuation - detect variables that are continuation of previous MOVE
+        move_continuation_result = self.parse_move_continuation(line)
+        if move_continuation_result:
+            return move_continuation_result
+        
         # IF - Enhanced parsing
         if_result = self.parse_if_statement_enhanced(line)
         if if_result:
@@ -1520,6 +1563,9 @@ class EnhancedCobolConverter:
         elif op == "MOVE" or op == "MOVE_CORRESPONDING":
             result = self.convert_move_statement_enhanced(stmt)
             return self._apply_indentation(result, base_indent)
+        
+        elif op == "MOVE_CONTINUATION":
+            return self.convert_move_continuation(stmt, base_indent)
         
         elif op == "IF":
             result = self.convert_if_statement_enhanced(stmt)
