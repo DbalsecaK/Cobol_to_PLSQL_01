@@ -11,6 +11,8 @@ import sys
 from typing import Dict, List, Any, Optional, Tuple
 from cobol_condition_parser import CobolConditionParser
 from cobol_flow_control_parser import FlowControlParserFactory
+from cobol_goback_handler import GOBACKHandlerFactory
+from cobol_set_handler import SetHandlerFactory
 
 class EnhancedCobolConverter:
     def __init__(self):
@@ -29,6 +31,12 @@ class EnhancedCobolConverter:
         
         # Contexto para manejar continuaciones de IF con nombres calificados
         self.if_context = None
+        
+        # Handler para GOBACK
+        self.goback_handler = GOBACKHandlerFactory.create_standard_handler()
+        
+        # Handler para SET
+        self.set_handler = SetHandlerFactory.create_standard_handler()
         
         # Configuración de valores especiales COBOL para MOVE statements
         self.special_values = {
@@ -1736,7 +1744,7 @@ class EnhancedCobolConverter:
                         else:
                             # Es una línea de continuación (sin TO)
                             full_statement += " " + next_line
-                            j += 1
+                        j += 1
                     
                     statement = self._parse_statement(full_statement)
                     if statement:
@@ -1823,6 +1831,16 @@ class EnhancedCobolConverter:
         flow_control_result = self.flow_control_parser.parse_flow_control(line)
         if flow_control_result:
             return flow_control_result
+        
+        # GOBACK - detect GOBACK operations
+        goback_result = self.goback_handler.parse_goback(line)
+        if goback_result:
+            return goback_result
+        
+        # SET - detect SET operations
+        set_result = self.set_handler.parse_set_operation(line)
+        if set_result:
+            return set_result
         
         # STRING operations - detect STRING operations
         if line.strip().upper().startswith('STRING '):
@@ -2102,6 +2120,12 @@ class EnhancedCobolConverter:
         
         elif op in ["STOP_RUN", "EXIT_PROGRAM", "GO_TO"]:
             return self.flow_control_parser.convert_flow_control(stmt, base_indent)
+        
+        elif op == "GOBACK":
+            return self.goback_handler.convert_goback(stmt, base_indent)
+        
+        elif op == "SET":
+            return self.set_handler.convert_set_operation(stmt, base_indent)
         
         elif op == "STRING":
             return self.convert_string_operation_enhanced(stmt, base_indent)
