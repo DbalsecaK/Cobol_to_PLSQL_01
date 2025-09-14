@@ -230,9 +230,11 @@ class EnhancedCobolConverter:
                 i += 1
                 continue
             
-            # Identificar inicio de procedimiento (solo números seguidos de guiones y letras)
-            proc_match = re.match(r'(\d+-\w+(?:-\w+)*)\.?$', line, re.IGNORECASE)
-            if proc_match:
+            # Identificar inicio de procedimiento
+            # Solo procedimientos que empiecen con números o con letra seguida de números
+            # Excluir variables (WS-, S21-, FS-, MSG-, etc.) y palabras clave de COBOL
+            proc_match = re.match(r'((?:\d+|[A-Z]\d+)-[A-Z0-9]+(?:-[A-Z0-9]+)*)\.?$', line, re.IGNORECASE)
+            if proc_match and not re.match(r'(END-\w+|WS-|S21-|FS-|MSG-|TL-|LT-|CABE-|REG-|NUM-|COD-|FEM-|HOR-)', line, re.IGNORECASE):
                 # Guardar procedimiento anterior
                 if current_procedure:
                     self.procedures.append({
@@ -299,7 +301,7 @@ class EnhancedCobolConverter:
             }
         
         # PERFORM
-        perform_match = re.match(r'PERFORM\s+(\w+-\w+)\.?', line, re.IGNORECASE)
+        perform_match = re.match(r'PERFORM\s+([A-Z0-9-]+)\.?', line, re.IGNORECASE)
         if perform_match:
             return {
                 "op": "PERFORM",
@@ -307,7 +309,7 @@ class EnhancedCobolConverter:
             }
         
         # PERFORM UNTIL
-        perform_until_match = re.match(r'PERFORM\s+(\w+-\w+)\s+UNTIL\s+(.+)', line, re.IGNORECASE)
+        perform_until_match = re.match(r'PERFORM\s+([A-Z0-9-]+)\s+UNTIL\s+(.+)', line, re.IGNORECASE)
         if perform_until_match:
             return {
                 "op": "PERFORM_UNTIL",
