@@ -667,7 +667,7 @@ class AdvancedCobolConverter:
             record_declarations.append(f"  {record_name} CHAR({size});")
         
         # Generar declaraciones SQL
-        sql_declarations = []
+        sql_declarations = []var
         for sql_decl in ir.get("sql_declarations", []):
             sql_declarations.append(self.apply_rule(sql_decl, "  "))
         

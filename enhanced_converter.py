@@ -74,20 +74,20 @@ class EnhancedCobolConverter:
         if ' OF ' in upper_source:
             parts = source.split(' OF ')
             if len(parts) == 2:
-                field = self.clean_identifier(parts[0])
-                group = self.clean_identifier(parts[1])
+                field = self.clean_expression(parts[0])
+                group = self.clean_expression(parts[1])
                 return f"{group}.{field}"
         
         # Handle subscripted variables (FIELD(INDEX))
         if '(' in source and ')' in source:
             match = re.match(r'^([A-Z0-9_-]+)\(([A-Z0-9_-]+)\)', source, re.IGNORECASE)
             if match:
-                var_name = self.clean_identifier(match.group(1))
-                index = self.clean_identifier(match.group(2))
+                var_name = self.clean_expression(match.group(1))
+                index = self.clean_expression(match.group(2))
                 return f"{var_name}({index})"
         
         # Regular variable name
-        return self.clean_identifier(source)
+        return self.clean_expression(source)
     
     def parse_move_targets(self, targets: str) -> List[str]:
         """Parse multiple targets in MOVE statement"""
@@ -184,8 +184,8 @@ class EnhancedCobolConverter:
     
     def convert_move_corresponding(self, source: str, targets: str) -> str:
         """Convert MOVE CORRESPONDING to PL/SQL"""
-        source_clean = self.clean_identifier(source)
-        targets_clean = self.clean_identifier(targets)
+        source_clean = self.clean_expression(source)
+        targets_clean = self.clean_expression(targets)
         
         return f"-- MOVE CORRESPONDING {source_clean} TO {targets_clean}\n" \
                f"-- Note: This requires field-by-field mapping analysis\n" \
