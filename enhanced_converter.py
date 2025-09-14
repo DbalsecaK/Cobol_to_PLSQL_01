@@ -480,6 +480,78 @@ class EnhancedCobolConverter:
         
         return None
     
+    def parse_add_statement_enhanced(self, line: str) -> Optional[Dict[str, Any]]:
+        """Parse various ADD statement patterns"""
+        line = line.strip()
+        
+        # ADD literal/variable TO variable
+        add_to_match = re.match(r'ADD\s+([A-Z0-9_-]+)\s+TO\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
+        if add_to_match:
+            return {
+                "op": "ADD_TO",
+                "operand": add_to_match.group(1),
+                "target": add_to_match.group(2),
+                "raw": line
+            }
+        
+        # ADD multiple operands TO variable
+        add_multiple_to_match = re.match(r'ADD\s+([A-Z0-9_-]+(?:,\s*[A-Z0-9_-]+)+)\s+TO\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
+        if add_multiple_to_match:
+            operands_str = add_multiple_to_match.group(1)
+            operands = [op.strip() for op in operands_str.split(',')]
+            return {
+                "op": "ADD_MULTIPLE_TO",
+                "operands": operands,
+                "target": add_multiple_to_match.group(2),
+                "raw": line
+            }
+        
+        # ADD operand1 TO operand2 GIVING result
+        add_giving_match = re.match(r'ADD\s+([A-Z0-9_-]+)\s+TO\s+([A-Z0-9_-]+)\s+GIVING\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
+        if add_giving_match:
+            return {
+                "op": "ADD_GIVING",
+                "operand1": add_giving_match.group(1),
+                "operand2": add_giving_match.group(2),
+                "result": add_giving_match.group(3),
+                "raw": line
+            }
+        
+        # ADD multiple operands GIVING result
+        add_multiple_giving_match = re.match(r'ADD\s+([A-Z0-9_-]+(?:,\s*[A-Z0-9_-]+)+)\s+GIVING\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
+        if add_multiple_giving_match:
+            operands_str = add_multiple_giving_match.group(1)
+            operands = [op.strip() for op in operands_str.split(',')]
+            return {
+                "op": "ADD_MULTIPLE_GIVING",
+                "operands": operands,
+                "result": add_multiple_giving_match.group(2),
+                "raw": line
+            }
+        
+        # ADD CORRESPONDING group1 TO group2
+        add_corresponding_match = re.match(r'ADD\s+CORRESPONDING\s+([A-Z0-9_-]+)\s+TO\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
+        if add_corresponding_match:
+            return {
+                "op": "ADD_CORRESPONDING",
+                "source_group": add_corresponding_match.group(1),
+                "target_group": add_corresponding_match.group(2),
+                "raw": line
+            }
+        
+        # ADD CORRESPONDING group1 TO group2 GIVING result
+        add_corresponding_giving_match = re.match(r'ADD\s+CORRESPONDING\s+([A-Z0-9_-]+)\s+TO\s+([A-Z0-9_-]+)\s+GIVING\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
+        if add_corresponding_giving_match:
+            return {
+                "op": "ADD_CORRESPONDING_GIVING",
+                "source_group": add_corresponding_giving_match.group(1),
+                "target_group": add_corresponding_giving_match.group(2),
+                "result": add_corresponding_giving_match.group(3),
+                "raw": line
+            }
+        
+        return None
+    
     def convert_set_condition(self, stmt: Dict[str, Any], base_indent: str) -> str:
         """Convert SET condition-name TO TRUE/FALSE to PL/SQL"""
         condition_name = stmt.get("condition_name", "")
@@ -553,6 +625,79 @@ class EnhancedCobolConverter:
         value_clean = self.clean_expression(value)
         
         return f"{base_indent}{variable_clean} := {value_clean}; -- SET {variable_clean} TO {value_clean}"
+    
+    def convert_add_to(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert ADD operand TO target to PL/SQL"""
+        operand = stmt.get("operand", "")
+        target = stmt.get("target", "")
+        operand_clean = self.clean_expression(operand)
+        target_clean = self.clean_expression(target)
+        
+        return f"{base_indent}{target_clean} := {target_clean} + {operand_clean}; -- ADD {operand_clean} TO {target_clean}"
+    
+    def convert_add_multiple_to(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert ADD multiple operands TO target to PL/SQL"""
+        operands = stmt.get("operands", [])
+        target = stmt.get("target", "")
+        target_clean = self.clean_expression(target)
+        
+        operands_clean = [self.clean_expression(op) for op in operands]
+        operands_str = " + ".join(operands_clean)
+        
+        return f"{base_indent}{target_clean} := {target_clean} + {operands_str}; -- ADD {', '.join(operands_clean)} TO {target_clean}"
+    
+    def convert_add_giving(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert ADD operand1 TO operand2 GIVING result to PL/SQL"""
+        operand1 = stmt.get("operand1", "")
+        operand2 = stmt.get("operand2", "")
+        result = stmt.get("result", "")
+        
+        operand1_clean = self.clean_expression(operand1)
+        operand2_clean = self.clean_expression(operand2)
+        result_clean = self.clean_expression(result)
+        
+        return f"{base_indent}{result_clean} := {operand1_clean} + {operand2_clean}; -- ADD {operand1_clean} TO {operand2_clean} GIVING {result_clean}"
+    
+    def convert_add_multiple_giving(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert ADD multiple operands GIVING result to PL/SQL"""
+        operands = stmt.get("operands", [])
+        result = stmt.get("result", "")
+        
+        operands_clean = [self.clean_expression(op) for op in operands]
+        operands_str = " + ".join(operands_clean)
+        result_clean = self.clean_expression(result)
+        
+        return f"{base_indent}{result_clean} := {operands_str}; -- ADD {', '.join(operands_clean)} GIVING {result_clean}"
+    
+    def convert_add_corresponding(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert ADD CORRESPONDING source TO target to PL/SQL"""
+        source_group = stmt.get("source_group", "")
+        target_group = stmt.get("target_group", "")
+        
+        source_clean = self.clean_expression(source_group)
+        target_clean = self.clean_expression(target_group)
+        
+        return f"""{base_indent}-- ADD CORRESPONDING {source_clean} TO {target_clean}
+{base_indent}-- Note: This requires manual mapping of corresponding fields
+{base_indent}-- {target_clean}.field1 := {target_clean}.field1 + {source_clean}.field1;
+{base_indent}-- {target_clean}.field2 := {target_clean}.field2 + {source_clean}.field2;
+{base_indent}-- ... (continue for all corresponding fields)"""
+    
+    def convert_add_corresponding_giving(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert ADD CORRESPONDING source TO target GIVING result to PL/SQL"""
+        source_group = stmt.get("source_group", "")
+        target_group = stmt.get("target_group", "")
+        result = stmt.get("result", "")
+        
+        source_clean = self.clean_expression(source_group)
+        target_clean = self.clean_expression(target_group)
+        result_clean = self.clean_expression(result)
+        
+        return f"""{base_indent}-- ADD CORRESPONDING {source_clean} TO {target_clean} GIVING {result_clean}
+{base_indent}-- Note: This requires manual mapping of corresponding fields
+{base_indent}-- {result_clean}.field1 := {source_clean}.field1 + {target_clean}.field1;
+{base_indent}-- {result_clean}.field2 := {source_clean}.field2 + {target_clean}.field2;
+{base_indent}-- ... (continue for all corresponding fields)"""
     
     def parse_condition(self, condition: str) -> str:
         """Parse COBOL condition to PL/SQL condition"""
@@ -1200,6 +1345,11 @@ class EnhancedCobolConverter:
         if set_result:
             return set_result
         
+        # ADD OPERATIONS - Enhanced parsing
+        add_result = self.parse_add_statement_enhanced(line)
+        if add_result:
+            return add_result
+        
         # EXEC SQL blocks
         if re.match(r'EXEC\s+SQL', line, re.IGNORECASE):
             return {
@@ -1399,6 +1549,24 @@ class EnhancedCobolConverter:
         
         elif op == "SET_LITERAL":
             return self.convert_set_literal(stmt, base_indent)
+        
+        elif op == "ADD_TO":
+            return self.convert_add_to(stmt, base_indent)
+        
+        elif op == "ADD_MULTIPLE_TO":
+            return self.convert_add_multiple_to(stmt, base_indent)
+        
+        elif op == "ADD_GIVING":
+            return self.convert_add_giving(stmt, base_indent)
+        
+        elif op == "ADD_MULTIPLE_GIVING":
+            return self.convert_add_multiple_giving(stmt, base_indent)
+        
+        elif op == "ADD_CORRESPONDING":
+            return self.convert_add_corresponding(stmt, base_indent)
+        
+        elif op == "ADD_CORRESPONDING_GIVING":
+            return self.convert_add_corresponding_giving(stmt, base_indent)
         
         elif op == "SQL_INCLUDE":
             table_name = stmt.get("table", "")
