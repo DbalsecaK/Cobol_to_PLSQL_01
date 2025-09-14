@@ -126,6 +126,7 @@ class EnhancedCobolConverter:
     def _parse_working_storage(self, content: str):
         """Parsea WORKING-STORAGE SECTION mejorado"""
         lines = content.split('\n')
+        filler_counter = 1  # Contador para nombres FILLER únicos
         
         for line in lines:
             line = line.strip()
@@ -150,6 +151,11 @@ class EnhancedCobolConverter:
                     level = var_match.group(1)
                     name = var_match.group(2)
                     pic_clause = var_match.group(3).strip()
+                    
+                    # Si el nombre es FILLER, agregar secuencia numérica
+                    if name.upper() == 'FILLER':
+                        name = f"FILLER_{filler_counter}"
+                        filler_counter += 1
                     
                     # Determinar tipo y tamaño
                     var_type, size = self._parse_pic_clause(pic_clause)
