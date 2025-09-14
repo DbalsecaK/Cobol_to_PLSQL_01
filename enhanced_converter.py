@@ -27,6 +27,9 @@ class EnhancedCobolConverter:
         # Parser independiente para control de flujo (STOP RUN, EXIT PROGRAM, etc.)
         self.flow_control_parser = FlowControlParserFactory.create_standard_parser()
         
+        # Contexto para manejar continuaciones de IF con nombres calificados
+        self.if_context = None
+        
         # Configuración de valores especiales COBOL para MOVE statements
         self.special_values = {
             'SPACES': "''",  # Empty string
@@ -276,6 +279,21 @@ class EnhancedCobolConverter:
         
         return None
     
+    def parse_qualified_name_enhanced(self, line: str) -> Optional[Dict[str, Any]]:
+        """Parse qualified name - integrated implementation"""
+        line = line.strip()
+        
+        # Parse qualified name using integrated logic
+        parsed = self._parse_qualified_name_integrated(line)
+        if parsed:
+            return {
+                'op': 'QUALIFIED_NAME',
+                'component': parsed,
+                'raw': line
+            }
+        
+        return None
+    
     def convert_move_statement_enhanced(self, stmt: Dict[str, Any]) -> str:
         """Convert MOVE statement to PL/SQL with proper formatting"""
         source = stmt.get('src', '')
@@ -398,6 +416,18 @@ class EnhancedCobolConverter:
         
         return f"{base_indent}-- GAP: DISPLAY operation"
     
+    def convert_qualified_name_enhanced(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert qualified name to PL/SQL using integrated implementation"""
+        component = stmt.get('component', {})
+        raw = stmt.get('raw', '')
+        
+        if component:
+            # Convert qualified name using integrated logic
+            converted = self._convert_qualified_name_integrated(component)
+            return f"{base_indent}{converted}; -- Qualified name"
+        
+        return f"{base_indent}-- GAP: Qualified name"
+    
     def _apply_indentation(self, text: str, base_indent: str) -> str:
         """Apply proper indentation to multi-line PL/SQL code"""
         if not text:
@@ -441,12 +471,229 @@ class EnhancedCobolConverter:
         
         return '\n'.join(indented_lines)
     
+    def _detect_qualified_name(self, text: str) -> bool:
+        """Detect if text contains qualified name patterns"""
+        text = text.strip()
+        if not text or text.startswith('--'):
+            return False
+        
+        # Check for various qualified name patterns
+        patterns = [
+            r'^[A-Z0-9_-]+\s+OF\s+[A-Z0-9_-]+$',  # Simple: FIELD OF GROUP
+            r'^[A-Z0-9_-]+\s+OF\s+[A-Z0-9_-]+\s+OF\s+[A-Z0-9_-]+$',  # Complex: FIELD OF GROUP OF PARENT
+            r'^[A-Z0-9_-]+\s+OF\s+[A-Z0-9_-]+\([A-Z0-9_-]+\)$',  # Indexed: FIELD OF GROUP(INDEX)
+            r'^[A-Z0-9_-]+\s+OF\s+[A-Z0-9_-]+\s+\([0-9]+:[0-9]+\)$',  # Substring: FIELD OF GROUP (START:END)
+        ]
+        
+        for pattern in patterns:
+            if re.match(pattern, text, re.IGNORECASE):
+                return True
+        
+        return False
+    
+    def _parse_qualified_name_integrated(self, text: str) -> Optional[Dict[str, Any]]:
+        """Parse qualified name using integrated logic"""
+        text = text.strip()
+        
+        # Multi-level qualified: FIELD OF GROUP OF PARENT OF SUPERPARENT
+        pattern = r'^([A-Z0-9_-]+)\s+OF\s+([A-Z0-9_-]+)\s+OF\s+([A-Z0-9_-]+)\s+OF\s+([A-Z0-9_-]+)$'
+        match = re.match(pattern, text, re.IGNORECASE)
+        if match:
+            return {
+                'type': 'multi_level_qualified',
+                'field': match.group(1).strip(),
+                'group': match.group(2).strip(),
+                'parent': match.group(3).strip(),
+                'superparent': match.group(4).strip(),
+                'raw': text
+            }
+        
+        # Complex qualified: FIELD OF GROUP OF PARENT
+        pattern = r'^([A-Z0-9_-]+)\s+OF\s+([A-Z0-9_-]+)\s+OF\s+([A-Z0-9_-]+)$'
+        match = re.match(pattern, text, re.IGNORECASE)
+        if match:
+            return {
+                'type': 'complex_qualified',
+                'field': match.group(1).strip(),
+                'group': match.group(2).strip(),
+                'parent': match.group(3).strip(),
+                'raw': text
+            }
+        
+        # Substring qualified: FIELD OF GROUP (START:END)
+        pattern = r'^([A-Z0-9_-]+)\s+OF\s+([A-Z0-9_-]+)\s+\(([0-9]+):([0-9]+)\)$'
+        match = re.match(pattern, text, re.IGNORECASE)
+        if match:
+            return {
+                'type': 'substring_qualified',
+                'field': match.group(1).strip(),
+                'group': match.group(2).strip(),
+                'start': match.group(3).strip(),
+                'end': match.group(4).strip(),
+                'raw': text
+            }
+        
+        # Indexed qualified: FIELD OF GROUP(INDEX)
+        pattern = r'^([A-Z0-9_-]+)\s+OF\s+([A-Z0-9_-]+)\(([A-Z0-9_-]+)\)$'
+        match = re.match(pattern, text, re.IGNORECASE)
+        if match:
+            return {
+                'type': 'indexed_qualified',
+                'field': match.group(1).strip(),
+                'group': match.group(2).strip(),
+                'index': match.group(3).strip(),
+                'raw': text
+            }
+        
+        # Simple qualified: FIELD OF GROUP
+        pattern = r'^([A-Z0-9_-]+)\s+OF\s+([A-Z0-9_-]+)$'
+        match = re.match(pattern, text, re.IGNORECASE)
+        if match:
+            return {
+                'type': 'simple_qualified',
+                'field': match.group(1).strip(),
+                'group': match.group(2).strip(),
+                'raw': text
+            }
+        
+        return None
+    
+    def _convert_qualified_name_integrated(self, component: Dict[str, Any]) -> str:
+        """Convert qualified name to PL/SQL using integrated logic"""
+        component_type = component.get('type', '')
+        
+        if component_type == 'multi_level_qualified':
+            field = component.get('field', '').replace('-', '_')
+            group = component.get('group', '').replace('-', '_')
+            parent = component.get('parent', '').replace('-', '_')
+            superparent = component.get('superparent', '').replace('-', '_')
+            return f"{superparent}.{parent}.{group}.{field}"
+        
+        elif component_type == 'complex_qualified':
+            field = component.get('field', '').replace('-', '_')
+            group = component.get('group', '').replace('-', '_')
+            parent = component.get('parent', '').replace('-', '_')
+            return f"{parent}.{group}.{field}"
+        
+        elif component_type == 'substring_qualified':
+            field = component.get('field', '').replace('-', '_')
+            group = component.get('group', '').replace('-', '_')
+            start = component.get('start', '1')
+            end = component.get('end', '1')
+            return f"SUBSTR({group}.{field}, {start}, {end})"
+        
+        elif component_type == 'indexed_qualified':
+            field = component.get('field', '').replace('-', '_')
+            group = component.get('group', '').replace('-', '_')
+            index = component.get('index', '').replace('-', '_')
+            return f"{group}({index}).{field}"
+        
+        elif component_type == 'simple_qualified':
+            field = component.get('field', '').replace('-', '_')
+            group = component.get('group', '').replace('-', '_')
+            return f"{group}.{field}"
+        
+        # Fallback
+        return component.get('raw', 'UNKNOWN_QUALIFIED_NAME')
+    
+    def _is_if_qualified_continuation(self, line: str) -> bool:
+        """Check if line is an IF continuation with qualified names"""
+        line = line.strip()
+        
+        # Check if line looks like a qualified name continuation
+        # Pattern: starts with spaces and contains "OF" but not "IF"
+        if (line.startswith(' ') and 
+            ' OF ' in line.upper() and 
+            not line.strip().upper().startswith('IF') and
+            not line.strip().startswith('--')):
+            return True
+        
+        # Also check for lines that are just qualified names (like "S21-AREA-ENTORNO")
+        # that could be continuations of IF statements
+        if (line.startswith(' ') and 
+            not line.strip().upper().startswith(('MOVE', 'IF', 'WHEN', 'ELSE', 'END', '--')) and
+            not line.strip().startswith('--') and
+            len(line.strip()) > 0):
+            # Check if it looks like a group name (all caps with hyphens/underscores)
+            if re.match(r'^[A-Z0-9_-]+$', line.strip()):
+                # Additional check: if we have previous IF context, this is likely a continuation
+                if self.previous_if_context:
+                    return True
+                # Also check if the line is heavily indented (more than 20 spaces)
+                # which often indicates a continuation in COBOL
+                if len(line) - len(line.lstrip()) > 20:
+                    return True
+        
+        # Special case: if we have IF context and the line is just a group name
+        # (like "S21-AREA-ENTORNO" that completes "COD-EMPRESA OF")
+        if (self.if_context and 
+            re.match(r'^[A-Z0-9_-]+$', line) and
+            not line.upper().startswith(('MOVE', 'IF', 'WHEN', 'ELSE', 'END', '--', 'CONTINUE', 'PERFORM', 'CALL', 'EXIT', 'STOP', 'GO', 'GOTO'))):
+            return True
+        
+        return False
+    
+    def parse_if_qualified_continuation(self, line: str) -> Optional[Dict[str, Any]]:
+        """Parse IF continuation with qualified names"""
+        line = line.strip()
+        
+        # First try to parse as a complete qualified name
+        parsed = self._parse_qualified_name_integrated(line)
+        if parsed:
+            return {
+                'op': 'IF_QUALIFIED_CONTINUATION',
+                'component': parsed,
+                'raw': line
+            }
+        
+        # If not a complete qualified name, it might be just a group name
+        # (like "S21-AREA-ENTORNO" that completes "COD-EMPRESA OF")
+        if re.match(r'^[A-Z0-9_-]+$', line):
+            return {
+                'op': 'IF_QUALIFIED_CONTINUATION',
+                'component': {
+                    'type': 'group_name',
+                    'group': line,
+                    'raw': line
+                },
+                'raw': line
+            }
+        
+        return None
+    
+    def convert_if_qualified_continuation(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert IF qualified continuation to PL/SQL"""
+        component = stmt.get('component', {})
+        
+        if component:
+            component_type = component.get('type', '')
+            
+            if component_type == 'group_name':
+                # This is just a group name that completes a qualified name
+                group = component.get('group', '').replace('-', '_')
+                
+                if self.if_context:
+                    field_name = self.if_context.get('field_name', 'UNKNOWN').replace('-', '_')
+                    # Clear the context after using it
+                    self.if_context = None
+                    return f"{base_indent}{group}.{field_name}"
+                else:
+                    # Fallback if no context available
+                    return f"{base_indent}{group}.COD_EMPRESA"
+            else:
+                # Convert the qualified name part
+                converted = self._convert_qualified_name_integrated(component)
+                # This should complete the IF condition, so add THEN
+                return f"{base_indent}{converted}"
+        
+        return f"{base_indent}-- GAP: IF qualified continuation"
+    
     def _process_statements_with_context(self, statements: list, base_indent: str) -> list:
         """Process statements with proper context-aware indentation"""
         result = []
         indent_stack = [base_indent]  # Stack to track indentation levels
         
-        for stmt in statements:
+        for i, stmt in enumerate(statements):
             op = stmt.get("op", "UNKNOWN")
             current_indent = indent_stack[-1]
             
@@ -455,6 +702,37 @@ class EnhancedCobolConverter:
                 out = self.apply_rule(stmt, current_indent)
                 result.append(out)
                 indent_stack.append(current_indent + "    ")  # Increase indent for IF block
+                
+            elif op == "IF_QUALIFIED_CONTINUATION":
+                # IF qualified continuation - combine with previous IF line
+                if result and result[-1].strip().endswith("THEN"):
+                    # Remove the last line and combine it with the continuation
+                    last_line = result.pop()
+                    # Remove the "THEN" from the last line
+                    last_line_clean = last_line.rstrip().rstrip("THEN").strip()
+                    
+                    # Get the continuation part
+                    continuation = self.convert_if_qualified_continuation(stmt, "")
+                    continuation_clean = continuation.strip()
+                    
+                    # Fix the combination logic: replace "COD_EMPRESA OF" with the continuation
+                    if "COD_EMPRESA OF" in last_line_clean:
+                        # Replace "COD_EMPRESA OF" with the continuation
+                        combined = last_line_clean.replace("COD_EMPRESA OF", continuation_clean)
+                        # Add THEN at the end
+                        combined = f"{combined} THEN"
+                        # Preserve the original indentation
+                        original_indent = last_line[:len(last_line) - len(last_line.lstrip())]
+                        result.append(f"{original_indent}{combined}")
+                    else:
+                        # Fallback: just combine them
+                        combined = f"{last_line_clean} {continuation_clean} THEN"
+                        original_indent = last_line[:len(last_line) - len(last_line.lstrip())]
+                        result.append(f"{original_indent}{combined}")
+                else:
+                    # Fallback if no previous IF line found
+                    out = self.apply_rule(stmt, current_indent)
+                    result.append(out)
                 
             elif op == "END_IF":
                 # END IF - pop indent level and add to result
@@ -1057,11 +1335,22 @@ class EnhancedCobolConverter:
                 # Check if condition ends with OR/AND (needs continuation)
                 needs_continuation = condition.upper().endswith(' OR') or condition.upper().endswith(' AND')
                 
+                # Check if condition ends with "OF" (needs continuation with group name)
+                needs_qualified_continuation = condition.upper().endswith(' OF')
+                
+                # Store context for qualified continuation
+                if needs_qualified_continuation:
+                    self.if_context = {
+                        'condition': condition,
+                        'field_name': condition.split()[-2] if len(condition.split()) >= 2 else 'UNKNOWN'
+                    }
+                
                 return {
                     'op': 'IF',
                     'condition': condition,
                     'then_action': then_action,
                     'needs_continuation': needs_continuation,
+                    'needs_qualified_continuation': needs_qualified_continuation,
                     'raw': line
                 }
         
@@ -1506,6 +1795,16 @@ class EnhancedCobolConverter:
             }
         
         # MOVE - Enhanced parsing
+        # MOVE statements - Enhanced parsing with IF context check
+        # Check if we should intercept MOVE parsing due to IF context
+        if (self.if_context and 
+            re.match(r'^[A-Z0-9_-]+$', line.strip()) and
+            not line.strip().upper().startswith(('MOVE', 'IF', 'WHEN', 'ELSE', 'END', '--', 'CONTINUE', 'PERFORM', 'CALL', 'EXIT', 'STOP', 'GO', 'GOTO'))):
+            # This line should be processed as IF continuation instead of MOVE
+            if_continuation_result = self.parse_if_qualified_continuation(line)
+            if if_continuation_result:
+                return if_continuation_result
+        
         move_result = self.parse_move_statement_enhanced(line)
         if move_result:
             return move_result
@@ -1541,7 +1840,15 @@ class EnhancedCobolConverter:
         if "'Informar Protesto'" in line or "'Error llamada servicio de Protesto'" in line:
             return self.parse_display_operation_enhanced(line)
         
-        # IF - Enhanced parsing
+        # Check for IF continuation with qualified names FIRST (before other processing)
+        if self._is_if_qualified_continuation(line):
+            return self.parse_if_qualified_continuation(line)
+        
+        # Qualified names - detect complex qualified names
+        if self._detect_qualified_name(line):
+            return self.parse_qualified_name_enhanced(line)
+        
+        # IF - Enhanced parsing with qualified name continuation support
         if_result = self.parse_if_statement_enhanced(line)
         if if_result:
             return if_result
@@ -1801,6 +2108,12 @@ class EnhancedCobolConverter:
         
         elif op == "DISPLAY":
             return self.convert_display_operation_enhanced(stmt, base_indent)
+        
+        elif op == "QUALIFIED_NAME":
+            return self.convert_qualified_name_enhanced(stmt, base_indent)
+        
+        elif op == "IF_QUALIFIED_CONTINUATION":
+            return self.convert_if_qualified_continuation(stmt, base_indent)
         
         elif op == "EVALUATE":
             result = self.convert_evaluate_statement_enhanced(stmt)
