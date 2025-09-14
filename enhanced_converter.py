@@ -10,6 +10,7 @@ import os
 import sys
 from typing import Dict, List, Any, Optional, Tuple
 from cobol_condition_parser import CobolConditionParser
+from cobol_flow_control_parser import FlowControlParserFactory
 
 class EnhancedCobolConverter:
     def __init__(self):
@@ -22,6 +23,9 @@ class EnhancedCobolConverter:
         
         # Parser independiente para condiciones complejas
         self.condition_parser = CobolConditionParser()
+        
+        # Parser independiente para control de flujo (STOP RUN, EXIT PROGRAM, etc.)
+        self.flow_control_parser = FlowControlParserFactory.create_standard_parser()
         
         # Configuración de valores especiales COBOL para MOVE statements
         self.special_values = {
@@ -1431,6 +1435,11 @@ class EnhancedCobolConverter:
         if if_continuation_result:
             return if_continuation_result
         
+        # Flow control - detect STOP RUN, EXIT PROGRAM, GO TO, etc.
+        flow_control_result = self.flow_control_parser.parse_flow_control(line)
+        if flow_control_result:
+            return flow_control_result
+        
         # IF - Enhanced parsing
         if_result = self.parse_if_statement_enhanced(line)
         if if_result:
@@ -1682,6 +1691,9 @@ class EnhancedCobolConverter:
         
         elif op == "IF_LITERAL_CONTINUATION":
             return self.convert_if_literal_continuation(stmt, base_indent)
+        
+        elif op in ["STOP_RUN", "EXIT_PROGRAM", "GO_TO"]:
+            return self.flow_control_parser.convert_flow_control(stmt, base_indent)
         
         elif op == "EVALUATE":
             result = self.convert_evaluate_statement_enhanced(stmt)
