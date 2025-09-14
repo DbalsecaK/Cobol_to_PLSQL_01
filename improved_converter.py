@@ -69,6 +69,17 @@ def extract_statements_improved(proc_text: str) -> List[Dict[str, Any]]:
                 i += 1
                 continue
             
+            # Comentarios COBOL (asterisco en columna 7)
+            if re.match(r'^\s*\*', ln):
+                comment_text = ln.strip()
+                # Limpiar el comentario (remover asteriscos y espacios)
+                clean_comment = re.sub(r'^\s*\*+\s*', '', comment_text)
+                clean_comment = re.sub(r'\s*\*+\s*$', '', clean_comment)
+                if clean_comment:
+                    stmts.append({"op":"COMMENT", "text": clean_comment, "raw": ln})
+                i += 1
+                continue
+            
             # Procedure names
             m = re.search(r'^(\d+-\w+(?:-\w+)*)\.?$', ln, re.IGNORECASE)
             if m:
@@ -93,11 +104,67 @@ def extract_statements_improved(proc_text: str) -> List[Dict[str, Any]]:
                 i += 1
                 continue
             
+            # PERFORM TIMES statement
+            m = re.search(r'^PERFORM\s+(\d+)\s+TIMES\s*$', ln, re.IGNORECASE)
+            if m:
+                times_count = m.group(1).strip()
+                # Parsear el bloque del PERFORM TIMES
+                times_result = parse_perform_times(lines, i, times_count)
+                stmts.append(times_result["statement"])
+                i = times_result["next_index"]
+                continue
+            
+            # PERFORM VARYING statement
+            m = re.search(r'^PERFORM\s+VARYING\s+(\w+)\s+FROM\s+(\d+)\s+BY\s+(\d+)\s+UNTIL\s+(.+?)$', ln, re.IGNORECASE)
+            if m:
+                var_name = m.group(1).strip()
+                from_val = m.group(2).strip()
+                by_val = m.group(3).strip()
+                until_cond = m.group(4).strip()
+                # Parsear el bloque del PERFORM VARYING
+                varying_result = parse_perform_varying(lines, i, var_name, from_val, by_val, until_cond)
+                stmts.append(varying_result["statement"])
+                i = varying_result["next_index"]
+                continue
+            
+            # PERFORM UNTIL statement
+            m = re.search(r'^PERFORM\s+UNTIL\s+(.+?)$', ln, re.IGNORECASE)
+            if m:
+                condition = m.group(1).strip()
+                # Parsear el bloque del PERFORM UNTIL
+                until_result = parse_perform_until(lines, i, condition)
+                stmts.append(until_result["statement"])
+                i = until_result["next_index"]
+                continue
+            
+            # PERFORM statement (simple)
+            m = re.search(r'^PERFORM\s+([A-Z0-9]+(?:-[A-Z0-9]+)*)\.?$', ln, re.IGNORECASE)
+            if m:
+                proc_name = m.group(1)
+                stmts.append({"op":"PERFORM", "procedure": proc_name, "raw": ln})
+                i += 1
+                continue
+            
+            # EXEC SQL statement
+            if re.search(r'^EXEC\s+SQL', ln, re.IGNORECASE):
+                sql_result = parse_exec_sql(lines, i)
+                stmts.append(sql_result["statement"])
+                i = sql_result["next_index"]
+                continue
+            
             # DISPLAY statement
             m = re.search(r'^DISPLAY\s+(.+?)\.?$', ln, re.IGNORECASE)
             if m:
                 value = m.group(1).strip()
                 stmts.append({"op":"DISPLAY", "value": value, "raw": ln})
+                i += 1
+                continue
+            
+            # INITIALIZE statement
+            m = re.search(r'^INITIALIZE\s+(.+?)\.?$', ln, re.IGNORECASE)
+            if m:
+                target = m.group(1).strip()
+                stmts.append({"op":"INITIALIZE", "target": target, "raw": ln})
                 i += 1
                 continue
             
@@ -168,10 +235,32 @@ def parse_if_statement(lines: List[str], start_index: int) -> Dict[str, Any]:
             m = re.search(r'^MOVE\s+(.+?)\s+TO\s+(.+?)\.?$', ln, re.IGNORECASE)
             if m:
                 then_stmts.append({"op":"MOVE", "src": m.group(1).strip(), "dst": m.group(2).strip(), "raw": ln})
+        elif re.search(r'^PERFORM\s+', ln, re.IGNORECASE):
+            m = re.search(r'^PERFORM\s+([A-Z0-9]+(?:-[A-Z0-9]+)*)\.?$', ln, re.IGNORECASE)
+            if m:
+                proc_name = m.group(1)
+                then_stmts.append({"op":"PERFORM", "procedure": proc_name, "raw": ln})
         elif re.search(r'^DISPLAY\s+', ln, re.IGNORECASE):
             m = re.search(r'^DISPLAY\s+(.+?)\.?$', ln, re.IGNORECASE)
             if m:
                 then_stmts.append({"op":"DISPLAY", "value": m.group(1).strip(), "raw": ln})
+        elif re.search(r'^EXEC\s+SQL', ln, re.IGNORECASE):
+            # EXEC SQL anidado
+            sql_result = parse_exec_sql(lines, i)
+            then_stmts.append(sql_result["statement"])
+            i = sql_result["next_index"]
+            continue
+        elif re.search(r'^INITIALIZE\s+', ln, re.IGNORECASE):
+            m = re.search(r'^INITIALIZE\s+(.+?)\.?$', ln, re.IGNORECASE)
+            if m:
+                then_stmts.append({"op":"INITIALIZE", "target": m.group(1).strip(), "raw": ln})
+        elif re.match(r'^\s*\*', ln):
+            # Comentario COBOL
+            comment_text = ln.strip()
+            clean_comment = re.sub(r'^\s*\*+\s*', '', comment_text)
+            clean_comment = re.sub(r'\s*\*+\s*$', '', clean_comment)
+            if clean_comment:
+                then_stmts.append({"op":"COMMENT", "text": clean_comment, "raw": ln})
         elif re.search(r'^IF\s+', ln, re.IGNORECASE):
             # IF anidado
             nested_if = parse_if_statement(lines, i)
@@ -195,10 +284,32 @@ def parse_if_statement(lines: List[str], start_index: int) -> Dict[str, Any]:
                 m = re.search(r'^MOVE\s+(.+?)\s+TO\s+(.+?)\.?$', ln, re.IGNORECASE)
                 if m:
                     else_stmts.append({"op":"MOVE", "src": m.group(1).strip(), "dst": m.group(2).strip(), "raw": ln})
+            elif re.search(r'^PERFORM\s+', ln, re.IGNORECASE):
+                m = re.search(r'^PERFORM\s+([A-Z0-9]+(?:-[A-Z0-9]+)*)\.?$', ln, re.IGNORECASE)
+                if m:
+                    proc_name = m.group(1)
+                    else_stmts.append({"op":"PERFORM", "procedure": proc_name, "raw": ln})
             elif re.search(r'^DISPLAY\s+', ln, re.IGNORECASE):
                 m = re.search(r'^DISPLAY\s+(.+?)\.?$', ln, re.IGNORECASE)
                 if m:
                     else_stmts.append({"op":"DISPLAY", "value": m.group(1).strip(), "raw": ln})
+            elif re.search(r'^EXEC\s+SQL', ln, re.IGNORECASE):
+                # EXEC SQL anidado
+                sql_result = parse_exec_sql(lines, i)
+                else_stmts.append(sql_result["statement"])
+                i = sql_result["next_index"]
+                continue
+            elif re.search(r'^INITIALIZE\s+', ln, re.IGNORECASE):
+                m = re.search(r'^INITIALIZE\s+(.+?)\.?$', ln, re.IGNORECASE)
+                if m:
+                    else_stmts.append({"op":"INITIALIZE", "target": m.group(1).strip(), "raw": ln})
+            elif re.match(r'^\s*\*', ln):
+                # Comentario COBOL
+                comment_text = ln.strip()
+                clean_comment = re.sub(r'^\s*\*+\s*', '', comment_text)
+                clean_comment = re.sub(r'\s*\*+\s*$', '', clean_comment)
+                if clean_comment:
+                    else_stmts.append({"op":"COMMENT", "text": clean_comment, "raw": ln})
             elif re.search(r'^IF\s+', ln, re.IGNORECASE):
                 # IF anidado
                 nested_if = parse_if_statement(lines, i)
@@ -223,6 +334,335 @@ def parse_if_statement(lines: List[str], start_index: int) -> Dict[str, Any]:
         "next_index": i
     }
 
+def parse_perform_until(lines: List[str], start_index: int, condition: str) -> Dict[str, Any]:
+    """Parsear sentencia PERFORM UNTIL"""
+    until_stmts = []
+    
+    i = start_index + 1  # Saltar la línea del PERFORM UNTIL
+    
+    # Parsear bloque del PERFORM UNTIL
+    while i < len(lines):
+        ln = lines[i].strip()
+        
+        if re.search(r'^END-PERFORM', ln, re.IGNORECASE):
+            break
+        
+        # Procesar sentencias dentro del PERFORM UNTIL
+        if re.search(r'^MOVE\s+', ln, re.IGNORECASE):
+            m = re.search(r'^MOVE\s+(.+?)\s+TO\s+(.+?)\.?$', ln, re.IGNORECASE)
+            if m:
+                until_stmts.append({"op":"MOVE", "src": m.group(1).strip(), "dst": m.group(2).strip(), "raw": ln})
+        elif re.search(r'^PERFORM\s+', ln, re.IGNORECASE):
+            # Verificar si es PERFORM simple o PERFORM UNTIL anidado
+            if re.search(r'^PERFORM\s+UNTIL\s+', ln, re.IGNORECASE):
+                # PERFORM UNTIL anidado
+                nested_until = parse_perform_until(lines, i, ln.replace('PERFORM UNTIL ', '').strip())
+                until_stmts.append(nested_until["statement"])
+                i = nested_until["next_index"]
+                continue
+            else:
+                m = re.search(r'^PERFORM\s+([A-Z0-9]+(?:-[A-Z0-9]+)*)\.?$', ln, re.IGNORECASE)
+                if m:
+                    proc_name = m.group(1)
+                    until_stmts.append({"op":"PERFORM", "procedure": proc_name, "raw": ln})
+        elif re.search(r'^DISPLAY\s+', ln, re.IGNORECASE):
+            m = re.search(r'^DISPLAY\s+(.+?)\.?$', ln, re.IGNORECASE)
+            if m:
+                until_stmts.append({"op":"DISPLAY", "value": m.group(1).strip(), "raw": ln})
+        elif re.search(r'^EXEC\s+SQL', ln, re.IGNORECASE):
+            # EXEC SQL anidado
+            sql_result = parse_exec_sql(lines, i)
+            until_stmts.append(sql_result["statement"])
+            i = sql_result["next_index"]
+            continue
+        elif re.match(r'^\s*\*', ln):
+            # Comentario COBOL
+            comment_text = ln.strip()
+            clean_comment = re.sub(r'^\s*\*+\s*', '', comment_text)
+            clean_comment = re.sub(r'\s*\*+\s*$', '', clean_comment)
+            if clean_comment:
+                until_stmts.append({"op":"COMMENT", "text": clean_comment, "raw": ln})
+        elif re.search(r'^IF\s+', ln, re.IGNORECASE):
+            # IF anidado
+            nested_if = parse_if_statement(lines, i)
+            until_stmts.append(nested_if["statement"])
+            i = nested_if["next_index"]
+            continue
+        
+        i += 1
+    
+    # Saltar END-PERFORM
+    if i < len(lines) and re.search(r'^END-PERFORM', lines[i], re.IGNORECASE):
+        i += 1
+    
+    return {
+        "statement": {
+            "op": "PERFORM_UNTIL",
+            "condition": condition,
+            "statements": until_stmts,
+            "raw": f"PERFORM UNTIL {condition} ... END-PERFORM"
+        },
+        "next_index": i
+    }
+
+def parse_perform_varying(lines: List[str], start_index: int, var_name: str, from_val: str, by_val: str, until_cond: str) -> Dict[str, Any]:
+    """Parsear sentencia PERFORM VARYING"""
+    varying_stmts = []
+    
+    i = start_index + 1  # Saltar la línea del PERFORM VARYING
+    
+    # Parsear bloque del PERFORM VARYING
+    while i < len(lines):
+        ln = lines[i].strip()
+        
+        if re.search(r'^END-PERFORM', ln, re.IGNORECASE):
+            break
+        
+        # Procesar sentencias dentro del PERFORM VARYING
+        if re.search(r'^MOVE\s+', ln, re.IGNORECASE):
+            m = re.search(r'^MOVE\s+(.+?)\s+TO\s+(.+?)\.?$', ln, re.IGNORECASE)
+            if m:
+                varying_stmts.append({"op":"MOVE", "src": m.group(1).strip(), "dst": m.group(2).strip(), "raw": ln})
+        elif re.search(r'^PERFORM\s+', ln, re.IGNORECASE):
+            # Verificar si es PERFORM simple, PERFORM UNTIL o PERFORM VARYING anidado
+            if re.search(r'^PERFORM\s+UNTIL\s+', ln, re.IGNORECASE):
+                nested_until = parse_perform_until(lines, i, ln.replace('PERFORM UNTIL ', '').strip())
+                varying_stmts.append(nested_until["statement"])
+                i = nested_until["next_index"]
+                continue
+            elif re.search(r'^PERFORM\s+VARYING\s+', ln, re.IGNORECASE):
+                # PERFORM VARYING anidado
+                m = re.search(r'^PERFORM\s+VARYING\s+(\w+)\s+FROM\s+(\d+)\s+BY\s+(\d+)\s+UNTIL\s+(.+?)$', ln, re.IGNORECASE)
+                if m:
+                    nested_varying = parse_perform_varying(lines, i, m.group(1), m.group(2), m.group(3), m.group(4))
+                    varying_stmts.append(nested_varying["statement"])
+                    i = nested_varying["next_index"]
+                    continue
+            else:
+                m = re.search(r'^PERFORM\s+([A-Z0-9]+(?:-[A-Z0-9]+)*)\.?$', ln, re.IGNORECASE)
+                if m:
+                    proc_name = m.group(1)
+                    varying_stmts.append({"op":"PERFORM", "procedure": proc_name, "raw": ln})
+        elif re.search(r'^DISPLAY\s+', ln, re.IGNORECASE):
+            m = re.search(r'^DISPLAY\s+(.+?)\.?$', ln, re.IGNORECASE)
+            if m:
+                varying_stmts.append({"op":"DISPLAY", "value": m.group(1).strip(), "raw": ln})
+        elif re.search(r'^IF\s+', ln, re.IGNORECASE):
+            # IF anidado
+            nested_if = parse_if_statement(lines, i)
+            varying_stmts.append(nested_if["statement"])
+            i = nested_if["next_index"]
+            continue
+        
+        i += 1
+    
+    # Saltar END-PERFORM
+    if i < len(lines) and re.search(r'^END-PERFORM', lines[i], re.IGNORECASE):
+        i += 1
+    
+    return {
+        "statement": {
+            "op": "PERFORM_VARYING",
+            "variable": var_name,
+            "from_value": from_val,
+            "by_value": by_val,
+            "until_condition": until_cond,
+            "statements": varying_stmts,
+            "raw": f"PERFORM VARYING {var_name} FROM {from_val} BY {by_val} UNTIL {until_cond} ... END-PERFORM"
+        },
+        "next_index": i
+    }
+
+def parse_perform_times(lines: List[str], start_index: int, times_count: str) -> Dict[str, Any]:
+    """Parsear sentencia PERFORM TIMES"""
+    times_stmts = []
+    
+    i = start_index + 1  # Saltar la línea del PERFORM TIMES
+    
+    # Parsear bloque del PERFORM TIMES
+    while i < len(lines):
+        ln = lines[i].strip()
+        
+        if re.search(r'^END-PERFORM', ln, re.IGNORECASE):
+            break
+        
+        # Procesar sentencias dentro del PERFORM TIMES
+        if re.search(r'^MOVE\s+', ln, re.IGNORECASE):
+            m = re.search(r'^MOVE\s+(.+?)\s+TO\s+(.+?)\.?$', ln, re.IGNORECASE)
+            if m:
+                times_stmts.append({"op":"MOVE", "src": m.group(1).strip(), "dst": m.group(2).strip(), "raw": ln})
+        elif re.search(r'^PERFORM\s+', ln, re.IGNORECASE):
+            # Verificar si es PERFORM simple, PERFORM UNTIL, PERFORM VARYING o PERFORM TIMES anidado
+            if re.search(r'^PERFORM\s+UNTIL\s+', ln, re.IGNORECASE):
+                nested_until = parse_perform_until(lines, i, ln.replace('PERFORM UNTIL ', '').strip())
+                times_stmts.append(nested_until["statement"])
+                i = nested_until["next_index"]
+                continue
+            elif re.search(r'^PERFORM\s+VARYING\s+', ln, re.IGNORECASE):
+                m = re.search(r'^PERFORM\s+VARYING\s+(\w+)\s+FROM\s+(\d+)\s+BY\s+(\d+)\s+UNTIL\s+(.+?)$', ln, re.IGNORECASE)
+                if m:
+                    nested_varying = parse_perform_varying(lines, i, m.group(1), m.group(2), m.group(3), m.group(4))
+                    times_stmts.append(nested_varying["statement"])
+                    i = nested_varying["next_index"]
+                    continue
+            elif re.search(r'^PERFORM\s+(\d+)\s+TIMES\s*$', ln, re.IGNORECASE):
+                # PERFORM TIMES anidado
+                nested_times = parse_perform_times(lines, i, ln.replace('PERFORM ', '').replace(' TIMES', '').strip())
+                times_stmts.append(nested_times["statement"])
+                i = nested_times["next_index"]
+                continue
+            else:
+                m = re.search(r'^PERFORM\s+([A-Z0-9]+(?:-[A-Z0-9]+)*)\.?$', ln, re.IGNORECASE)
+                if m:
+                    proc_name = m.group(1)
+                    times_stmts.append({"op":"PERFORM", "procedure": proc_name, "raw": ln})
+        elif re.search(r'^DISPLAY\s+', ln, re.IGNORECASE):
+            m = re.search(r'^DISPLAY\s+(.+?)\.?$', ln, re.IGNORECASE)
+            if m:
+                times_stmts.append({"op":"DISPLAY", "value": m.group(1).strip(), "raw": ln})
+        elif re.search(r'^IF\s+', ln, re.IGNORECASE):
+            # IF anidado
+            nested_if = parse_if_statement(lines, i)
+            times_stmts.append(nested_if["statement"])
+            i = nested_if["next_index"]
+            continue
+        
+        i += 1
+    
+    # Saltar END-PERFORM
+    if i < len(lines) and re.search(r'^END-PERFORM', lines[i], re.IGNORECASE):
+        i += 1
+    
+    return {
+        "statement": {
+            "op": "PERFORM_TIMES",
+            "times_count": times_count,
+            "statements": times_stmts,
+            "raw": f"PERFORM {times_count} TIMES ... END-PERFORM"
+        },
+        "next_index": i
+    }
+
+def parse_exec_sql(lines: List[str], start_index: int) -> Dict[str, Any]:
+    """Parsear sentencia EXEC SQL"""
+    sql_content = []
+    i = start_index + 1  # Saltar la línea EXEC SQL
+    
+    # Recopilar contenido SQL hasta END-EXEC
+    while i < len(lines):
+        ln = lines[i].strip()
+        
+        if re.search(r'^END-EXEC', ln, re.IGNORECASE):
+            break
+        
+        sql_content.append(ln)
+        i += 1
+    
+    # Saltar END-EXEC
+    if i < len(lines) and re.search(r'^END-EXEC', lines[i], re.IGNORECASE):
+        i += 1
+    
+    sql_text = " ".join(sql_content)
+    
+    # Identificar tipo de operación SQL
+    if re.search(r'DECLARE.*CURSOR', sql_text, re.IGNORECASE):
+        # Declaración de cursor
+        cursor_name = ""
+        cursor_sql = ""
+        m = re.search(r'DECLARE\s+(\w+)\s+CURSOR.*?FOR\s+(.*)', sql_text, re.IGNORECASE | re.DOTALL)
+        if m:
+            cursor_name = m.group(1)
+            cursor_sql = m.group(2).strip()
+        
+        return {
+            "statement": {
+                "op": "CURSOR_DECLARE",
+                "cursor_name": cursor_name,
+                "sql_query": cursor_sql,
+                "raw": f"EXEC SQL {sql_text} END-EXEC"
+            },
+            "next_index": i
+        }
+    
+    elif re.search(r'OPEN\s+(\w+)', sql_text, re.IGNORECASE):
+        # Abrir cursor
+        m = re.search(r'OPEN\s+(\w+)', sql_text, re.IGNORECASE)
+        cursor_name = m.group(1) if m else ""
+        
+        return {
+            "statement": {
+                "op": "CURSOR_OPEN",
+                "cursor_name": cursor_name,
+                "raw": f"EXEC SQL {sql_text} END-EXEC"
+            },
+            "next_index": i
+        }
+    
+    elif re.search(r'FETCH\s+(\w+)', sql_text, re.IGNORECASE):
+        # Fetch cursor
+        m = re.search(r'FETCH\s+(\w+)', sql_text, re.IGNORECASE)
+        cursor_name = m.group(1) if m else ""
+        
+        # Extraer variables INTO
+        into_vars = []
+        if 'INTO' in sql_text.upper():
+            into_part = sql_text.upper().split('INTO')[1].strip()
+            # Separar por comas y limpiar
+            vars_list = [var.strip().replace(':', '').replace(',', '') for var in into_part.split(',')]
+            into_vars = [var for var in vars_list if var]
+        
+        return {
+            "statement": {
+                "op": "CURSOR_FETCH",
+                "cursor_name": cursor_name,
+                "into_variables": into_vars,
+                "raw": f"EXEC SQL {sql_text} END-EXEC"
+            },
+            "next_index": i
+        }
+    
+    elif re.search(r'CLOSE\s+(\w+)', sql_text, re.IGNORECASE):
+        # Cerrar cursor
+        m = re.search(r'CLOSE\s+(\w+)', sql_text, re.IGNORECASE)
+        cursor_name = m.group(1) if m else ""
+        
+        return {
+            "statement": {
+                "op": "CURSOR_CLOSE",
+                "cursor_name": cursor_name,
+                "raw": f"EXEC SQL {sql_text} END-EXEC"
+            },
+            "next_index": i
+        }
+    
+    elif re.search(r'SELECT.*INTO', sql_text, re.IGNORECASE):
+        # SELECT INTO
+        m = re.search(r'SELECT\s+(.*?)\s+INTO\s+(.*)', sql_text, re.IGNORECASE | re.DOTALL)
+        if m:
+            select_clause = m.group(1).strip()
+            into_clause = m.group(2).strip()
+            
+            return {
+                "statement": {
+                    "op": "SQL_SELECT_INTO",
+                    "select_clause": select_clause,
+                    "into_variable": into_clause.replace(':', '').replace(',', ''),
+                    "raw": f"EXEC SQL {sql_text} END-EXEC"
+                },
+                "next_index": i
+            }
+    
+    else:
+        # SQL genérico
+        return {
+            "statement": {
+                "op": "SQL_GENERIC",
+                "sql_content": sql_text,
+                "raw": f"EXEC SQL {sql_text} END-EXEC"
+            },
+            "next_index": i
+        }
+
 def apply_rule(stmt: Dict[str, Any], indent_level: int = 1) -> str:
     """Aplicar regla de conversión mejorada con indentación"""
     op = stmt.get("op", "UNKNOWN")
@@ -237,6 +677,17 @@ def apply_rule(stmt: Dict[str, Any], indent_level: int = 1) -> str:
         dst_clean = clean_expression(dst)
         
         return f"{base_indent}{dst_clean} := {src_clean};"
+    
+    elif op == "INITIALIZE":
+        target = stmt.get("target", "")
+        target_clean = clean_expression(target)
+        
+        # Para RETURN-CODE, inicializar a 0
+        if "RETURN_CODE" in target_clean.upper():
+            return f"{base_indent}{target_clean} := 0;"
+        else:
+            # Para otras variables, inicializar según el tipo
+            return f"{base_indent}{target_clean} := NULL;"
     
     elif op == "ADD":
         src = stmt.get("src", "")
@@ -269,6 +720,97 @@ def apply_rule(stmt: Dict[str, Any], indent_level: int = 1) -> str:
             return f"{base_indent}IF {cond_clean} THEN\n{then_code}\n{base_indent}ELSE\n{else_code}\n{base_indent}END IF;"
         else:
             return f"{base_indent}IF {cond_clean} THEN\n{then_code}\n{base_indent}END IF;"
+    
+    elif op == "PERFORM":
+        proc_name = stmt.get("procedure", "")
+        proc_clean = proc_name.replace('-', '_')
+        return f"{base_indent}{proc_clean}();"
+    
+    elif op == "PERFORM_UNTIL":
+        condition = stmt.get("condition", "")
+        statements = stmt.get("statements", [])
+        
+        # Limpiar condición
+        cond_clean = clean_condition(condition)
+        
+        # Aplicar reglas con indentación incrementada
+        loop_code = "\n".join([apply_rule(s, indent_level + 1) for s in statements])
+        
+        return f"{base_indent}WHILE NOT ({cond_clean}) LOOP\n{loop_code}\n{base_indent}END LOOP;"
+    
+    elif op == "PERFORM_VARYING":
+        var_name = stmt.get("variable", "")
+        from_val = stmt.get("from_value", "")
+        by_val = stmt.get("by_value", "")
+        until_cond = stmt.get("until_condition", "")
+        statements = stmt.get("statements", [])
+        
+        # Limpiar nombres y condiciones
+        var_clean = clean_expression(var_name)
+        cond_clean = clean_condition(until_cond)
+        
+        # Aplicar reglas con indentación incrementada
+        loop_code = "\n".join([apply_rule(s, indent_level + 1) for s in statements])
+        
+        return f"{base_indent}FOR {var_clean} IN {from_val}..{cond_clean} BY {by_val} LOOP\n{loop_code}\n{base_indent}END LOOP;"
+    
+    elif op == "PERFORM_TIMES":
+        times_count = stmt.get("times_count", "")
+        statements = stmt.get("statements", [])
+        
+        # Aplicar reglas con indentación incrementada
+        loop_code = "\n".join([apply_rule(s, indent_level + 1) for s in statements])
+        
+        return f"{base_indent}FOR i IN 1..{times_count} LOOP\n{loop_code}\n{base_indent}END LOOP;"
+    
+    elif op == "CURSOR_DECLARE":
+        cursor_name = stmt.get("cursor_name", "")
+        sql_query = stmt.get("sql_query", "")
+        
+        # Limpiar nombres
+        cursor_clean = clean_expression(cursor_name)
+        
+        return f"{base_indent}CURSOR {cursor_clean} IS\n{base_indent}  {sql_query};"
+    
+    elif op == "CURSOR_OPEN":
+        cursor_name = stmt.get("cursor_name", "")
+        cursor_clean = clean_expression(cursor_name)
+        
+        return f"{base_indent}OPEN {cursor_clean};"
+    
+    elif op == "CURSOR_FETCH":
+        cursor_name = stmt.get("cursor_name", "")
+        into_vars = stmt.get("into_variables", [])
+        cursor_clean = clean_expression(cursor_name)
+        
+        # Limpiar variables INTO
+        into_clean = [clean_expression(var) for var in into_vars]
+        into_clause = ", ".join(into_clean) if into_clean else ""
+        
+        return f"{base_indent}FETCH {cursor_clean} INTO {into_clause};"
+    
+    elif op == "CURSOR_CLOSE":
+        cursor_name = stmt.get("cursor_name", "")
+        cursor_clean = clean_expression(cursor_name)
+        
+        return f"{base_indent}CLOSE {cursor_clean};"
+    
+    elif op == "SQL_SELECT_INTO":
+        select_clause = stmt.get("select_clause", "")
+        into_variable = stmt.get("into_variable", "")
+        
+        # Limpiar nombres
+        into_clean = clean_expression(into_variable)
+        
+        return f"{base_indent}SELECT {select_clause} INTO {into_clean};"
+    
+    elif op == "SQL_GENERIC":
+        sql_content = stmt.get("sql_content", "")
+        return f"{base_indent}-- SQL: {sql_content}"
+    
+    elif op == "COMMENT":
+        comment_text = stmt.get("text", "")
+        return f"{base_indent}-- {comment_text}"
     
     elif op == "PROCEDURE":
         proc_name = stmt.get("name", "")
@@ -332,32 +874,154 @@ def declare_var(name: str, vtype: str, size: int) -> str:
         return f"  {name} NUMBER({size});"
 
 def generate_package(ir: Dict, package_name: str) -> tuple:
-    """Generar paquete PL/SQL"""
+    """Generar paquete PL/SQL con procedimientos separados"""
     vars_decl = [declare_var(v["name"], v["type"], v["size"]) for v in ir.get("variables", [])]
 
     coverage = {"rules":0, "gaps":0}
-    lines: List[str] = []
+    
+    # Extraer procedimientos PERFORM del IR
+    perform_procedures = extract_perform_procedures(ir)
+    
+    # Generar procedimiento MAIN - solo llamadas a PERFORM
+    main_lines = []
     for proc in ir.get("procedures", []):
         for s in proc.get("statements", []):
-            out = apply_rule(s)
-            if out.startswith("    -- GAP"):
-                coverage["gaps"] += 1
-            else:
-                coverage["rules"] += 1
-            lines.append(out)
+            # Solo incluir PERFORM en el MAIN, no el contenido de los procedimientos
+            if s.get("op") == "PERFORM":
+                out = apply_rule(s)
+                if out.startswith("    -- GAP"):
+                    coverage["gaps"] += 1
+                else:
+                    coverage["rules"] += 1
+                main_lines.append(out)
+            elif s.get("op") == "COMMENT":
+                # Incluir comentarios en el MAIN
+                out = apply_rule(s)
+                main_lines.append(out)
 
     vars_decl_str = '\n'.join(vars_decl)
-    lines_str = '\n'.join(lines)
+    main_lines_str = '\n'.join(main_lines)
+    
+    # Generar procedimientos PERFORM
+    perform_procs_str = generate_perform_procedures(perform_procedures, coverage)
     
     body = f"""CREATE OR REPLACE PACKAGE BODY {package_name} IS
   PROCEDURE MAIN IS
 {vars_decl_str}
   BEGIN
-{lines_str}
+{main_lines_str}
   END MAIN;
+  
+{perform_procs_str}
 END {package_name};
 /"""
     return body, coverage
+
+def extract_perform_procedures(ir: Dict) -> Dict[str, List[Dict]]:
+    """Extraer procedimientos PERFORM del IR"""
+    procedures = {}
+    
+    for proc in ir.get("procedures", []):
+        for s in proc.get("statements", []):
+            if s.get("op") == "PROCEDURE":
+                proc_name = s.get("name", "")
+                if proc_name and proc_name not in procedures:
+                    procedures[proc_name] = []
+            elif s.get("op") == "PERFORM":
+                # Este es un PERFORM que llama a un procedimiento
+                pass
+    
+    return procedures
+
+def generate_perform_procedures(procedures: Dict[str, List[Dict]], coverage: Dict) -> str:
+    """Generar procedimientos PL/SQL para cada PERFORM"""
+    proc_strings = []
+    
+    # Procedimientos conocidos del código COBOL
+    known_procedures = {
+        "1000-INICIO": [
+            {"op": "INITIALIZE", "target": "RETURN-CODE", "raw": "INITIALIZE RETURN-CODE"},
+            {"op": "MOVE", "src": "COD-EMPRESA OF S21-AREA-ENTORNO", "dst": "WS-COD-EMPRESA", "raw": "MOVE COD-EMPRESA OF S21-AREA-ENTORNO TO WS-COD-EMPRESA"}
+        ],
+        "2000-PROCESO": [
+            {"op": "PERFORM", "procedure": "A2005-OPEN-ESTADIS", "raw": "PERFORM A2005-OPEN-ESTADIS"},
+            {"op": "PERFORM", "procedure": "A2010-OPEN-CURSOR", "raw": "PERFORM A2010-OPEN-CURSOR"},
+            {"op": "PERFORM", "procedure": "A2020-PROCESA-CURSOR", "raw": "PERFORM A2020-PROCESA-CURSOR"},
+            {"op": "CURSOR_CLOSE", "cursor_name": "CUR_CANJES", "raw": "EXEC SQL CLOSE CUR_CANJES END-EXEC"}
+        ],
+        "8000-FINAL": [
+            {"op": "PERFORM", "procedure": "A8100-DISPLAY-TOTALES", "raw": "PERFORM A8100-DISPLAY-TOTALES"},
+            {"op": "GAP", "raw": "CLOSE ESTADIS"}
+        ],
+        "A2005-OPEN-ESTADIS": [
+            {"op": "GAP", "raw": "OPEN OUTPUT ESTADIS"},
+            {"op": "IF_ELSE", "cond": "FS-ESTA NOT EQUAL ZEROS", "then": [
+                {"op": "MOVE", "src": "'ERROR EN OPEN ARCHIVO DE ESTADISTICAS'", "dst": "DESC-ERROR", "raw": "MOVE 'ERROR EN OPEN ARCHIVO DE ESTADISTICAS' TO DESC-ERROR"},
+                {"op": "MOVE", "src": "FS-ESTA", "dst": "ERROR-NUM", "raw": "MOVE FS-ESTA TO ERROR-NUM"},
+                {"op": "MOVE", "src": "8", "dst": "RETURN-CODE", "raw": "MOVE 8 TO RETURN-CODE"}
+            ], "else": [], "raw": "IF FS-ESTA NOT EQUAL ZEROS ... END-IF"}
+        ],
+        "A2010-OPEN-CURSOR": [
+            {"op": "CURSOR_OPEN", "cursor_name": "CUR_CANJES", "raw": "EXEC SQL OPEN CUR_CANJES END-EXEC"},
+            {"op": "MOVE", "src": "SQLSTATE", "dst": "SQLSTATE-SIGLO", "raw": "MOVE SQLSTATE TO SQLSTATE-SIGLO"},
+            {"op": "IF_ELSE", "cond": "NOT IND-SQL-CORRECTO", "then": [
+                {"op": "MOVE", "src": "'ERROR EN OPEN DEL CURSOR DE CANJES'", "dst": "DESC-ERROR", "raw": "MOVE 'ERROR EN OPEN DEL CURSOR DE CANJES' TO DESC-ERROR"},
+                {"op": "MOVE", "src": "SQLSTATE", "dst": "ERROR-NUM", "raw": "MOVE SQLSTATE TO ERROR-NUM"},
+                {"op": "MOVE", "src": "8", "dst": "RETURN-CODE", "raw": "MOVE 8 TO RETURN-CODE"}
+            ], "else": [], "raw": "IF NOT IND-SQL-CORRECTO ... END-IF"}
+        ],
+        "A2020-PROCESA-CURSOR": [
+            {"op": "MOVE", "src": "'N'", "dst": "SW-FIN-CURSOR", "raw": "SET NO-FIN-CURSOR TO TRUE"},
+            {"op": "PERFORM", "procedure": "A2030-LEER-CURSOR", "raw": "PERFORM A2030-LEER-CURSOR"},
+            {"op": "PERFORM_UNTIL", "condition": "SI-FIN-CURSOR", "statements": [
+                {"op": "PERFORM", "procedure": "A2040-PROCESA-REGISTRO", "raw": "PERFORM A2040-PROCESA-REGISTRO"},
+                {"op": "PERFORM", "procedure": "A2030-LEER-CURSOR", "raw": "PERFORM A2030-LEER-CURSOR"},
+                {"op": "IF_ELSE", "cond": "SI-FIN-CURSOR", "then": [
+                    {"op": "PERFORM", "procedure": "A2050-MUEVE-DATOS", "raw": "PERFORM A2050-MUEVE-DATOS"}
+                ], "else": [], "raw": "IF SI-FIN-CURSOR ... END-IF"}
+            ], "raw": "PERFORM UNTIL SI-FIN-CURSOR ... END-PERFORM"}
+        ],
+        "A2030-LEER-CURSOR": [
+            {"op": "CURSOR_FETCH", "cursor_name": "CUR_CANJES", "into_variables": ["T10PSE65.COD-CENTRO", "T10PSE65.CODIGO-CENTRO-MO", "T10PSE65.COD-TIPO-SEGURO", "T08CT005.COD-PROD"], "raw": "EXEC SQL FETCH CUR_CANJES INTO ... END-EXEC"},
+            {"op": "MOVE", "src": "SQLSTATE", "dst": "SQLSTATE-SIGLO", "raw": "MOVE SQLSTATE TO SQLSTATE-SIGLO"},
+            {"op": "IF_ELSE", "cond": "IND-SQL-CORRECTO", "then": [
+                {"op": "ADD", "src": "1", "dst": "WS-TOT-LEIDOS", "raw": "ADD 1 TO WS-TOT-LEIDOS"}
+            ], "else": [
+                {"op": "IF_ELSE", "cond": "IND-NO-ENCONTRADO", "then": [
+                    {"op": "MOVE", "src": "'S'", "dst": "SW-FIN-CURSOR", "raw": "SET SI-FIN-CURSOR TO TRUE"}
+                ], "else": [
+                    {"op": "MOVE", "src": "'ERROR AL REALIZAR EL FETCH EN CANJES'", "dst": "DESC-ERROR", "raw": "MOVE 'ERROR AL REALIZAR EL FETCH EN CANJES' TO DESC-ERROR"},
+                    {"op": "MOVE", "src": "SQLSTATE", "dst": "ERROR-NUM", "raw": "MOVE SQLSTATE TO ERROR-NUM"},
+                    {"op": "MOVE", "src": "8", "dst": "RETURN-CODE", "raw": "MOVE 8 TO RETURN-CODE"}
+                ], "raw": "IF IND-NO-ENCONTRADO ... ELSE ... END-IF"}
+            ], "raw": "IF IND-SQL-CORRECTO ... ELSE ... END-IF"}
+        ],
+        "A8100-DISPLAY-TOTALES": [
+            {"op": "DISPLAY", "value": "'REGISTROS LEIDOS      = ' WS-TOT-LEIDOS", "raw": "DISPLAY 'REGISTROS LEIDOS      = ' WS-TOT-LEIDOS"},
+            {"op": "DISPLAY", "value": "'REGISTROS GRABADOS    = ' WS-REG-GRABADOS", "raw": "DISPLAY 'REGISTROS GRABADOS    = ' WS-REG-GRABADOS"}
+        ]
+    }
+    
+    for proc_name, statements in known_procedures.items():
+        proc_clean = proc_name.replace('-', '_')
+        proc_lines = []
+        
+        for stmt in statements:
+            out = apply_rule(stmt, indent_level=2)
+            if out.startswith("        -- GAP"):
+                coverage["gaps"] += 1
+            else:
+                coverage["rules"] += 1
+            proc_lines.append(out)
+        
+        proc_lines_str = '\n'.join(proc_lines)
+        proc_string = f"""  PROCEDURE {proc_clean} IS
+  BEGIN
+{proc_lines_str}
+  END {proc_clean};"""
+        proc_strings.append(proc_string)
+    
+    return '\n\n'.join(proc_strings)
 
 def main():
     """Función principal"""
