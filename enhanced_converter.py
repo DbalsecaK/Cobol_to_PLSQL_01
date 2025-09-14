@@ -190,6 +190,337 @@ class EnhancedCobolConverter:
         return f"-- MOVE CORRESPONDING {source_clean} TO {targets_clean}\n" \
                f"-- Note: This requires field-by-field mapping analysis\n" \
                f"-- {targets_clean} := {source_clean};"
+    
+    def _apply_indentation(self, text: str, base_indent: str) -> str:
+        """Apply proper indentation to multi-line PL/SQL code"""
+        if not text:
+            return ""
+        
+        lines = text.split('\n')
+        indented_lines = []
+        indent_level = 0
+        
+        for line in lines:
+            if line.strip():  # Skip empty lines
+                # Check if this line starts a block that needs nested indentation
+                if any(line.strip().startswith(keyword) for keyword in ['IF ', 'WHEN ', 'CASE ', 'LOOP ', 'BEGIN ']):
+                    indented_lines.append(f"{base_indent}{line}")
+                    indent_level = 1
+                elif line.strip() in ['END IF;', 'END CASE;', 'END LOOP;', 'END;', 'ELSE']:
+                    indent_level = 0
+                    indented_lines.append(f"{base_indent}{line}")
+                else:
+                    # Apply base indent plus additional indent for nested content
+                    nested_indent = "    " * indent_level
+                    indented_lines.append(f"{base_indent}{nested_indent}{line}")
+            else:
+                indented_lines.append("")
+        
+        return '\n'.join(indented_lines)
+    
+    def _apply_nested_indentation(self, text: str, base_indent: str, nested_indent: str = "    ") -> str:
+        """Apply indentation with additional nested indentation for block content"""
+        if not text:
+            return ""
+        
+        lines = text.split('\n')
+        indented_lines = []
+        
+        for line in lines:
+            if line.strip():  # Skip empty lines
+                indented_lines.append(f"{base_indent}{nested_indent}{line}")
+            else:
+                indented_lines.append("")
+        
+        return '\n'.join(indented_lines)
+    
+    def _process_statements_with_context(self, statements: list, base_indent: str) -> list:
+        """Process statements with proper context-aware indentation"""
+        result = []
+        indent_stack = [base_indent]  # Stack to track indentation levels
+        
+        for stmt in statements:
+            op = stmt.get("op", "UNKNOWN")
+            current_indent = indent_stack[-1]
+            
+            if op == "IF":
+                # IF statement - add to result and push new indent level
+                out = self.apply_rule(stmt, current_indent)
+                result.append(out)
+                indent_stack.append(current_indent + "    ")  # Increase indent for IF block
+                
+            elif op == "END_IF":
+                # END IF - pop indent level and add to result
+                if len(indent_stack) > 1:
+                    indent_stack.pop()
+                current_indent = indent_stack[-1]
+                out = self.apply_rule(stmt, current_indent)
+                result.append(out)
+                
+            elif op == "EVALUATE":
+                # EVALUATE statement - add to result and push new indent level
+                out = self.apply_rule(stmt, current_indent)
+                result.append(out)
+                indent_stack.append(current_indent + "    ")  # Increase indent for EVALUATE block
+                
+            elif op == "END_EVALUATE":
+                # END EVALUATE - pop indent level and add to result
+                if len(indent_stack) > 1:
+                    indent_stack.pop()
+                current_indent = indent_stack[-1]
+                out = self.apply_rule(stmt, current_indent)
+                result.append(out)
+                
+            elif op == "WHEN":
+                # WHEN statement - restore previous indent level if we're in a CASE block
+                if len(indent_stack) > 1:
+                    indent_stack.pop()  # Remove previous WHEN/ELSE indent
+                current_indent = indent_stack[-1]
+                out = self.apply_rule(stmt, current_indent)
+                result.append(out)
+                indent_stack.append(current_indent + "    ")  # Increase indent for WHEN block
+                
+            elif op == "ELSE":
+                # ELSE statement - restore previous indent level if we're in a CASE block
+                if len(indent_stack) > 1:
+                    indent_stack.pop()  # Remove previous WHEN/ELSE indent
+                current_indent = indent_stack[-1]
+                out = self.apply_rule(stmt, current_indent)
+                result.append(out)
+                indent_stack.append(current_indent + "    ")  # Increase indent for ELSE block
+                
+            else:
+                # Regular statement - use current indent level
+                out = self.apply_rule(stmt, current_indent)
+                result.append(out)
+        
+        return result
+    
+    def parse_condition(self, condition: str) -> str:
+        """Parse COBOL condition to PL/SQL condition"""
+        condition = condition.strip()
+        
+        # Handle NOT conditions
+        if condition.upper().startswith('NOT '):
+            inner_condition = condition[4:].strip()
+            return f"NOT ({self.parse_condition(inner_condition)})"
+        
+        # Handle class conditions (IS NUMERIC, IS ALPHABETIC, etc.)
+        class_conditions = [
+            (' IS NUMERIC', 'REGEXP_LIKE({}, ''^[0-9]+$'')'),
+            (' IS ALPHABETIC', 'REGEXP_LIKE({}, ''^[A-Za-z]+$'')'),
+            (' IS ALPHABETIC-LOWER', 'REGEXP_LIKE({}, ''^[a-z]+$'')'),
+            (' IS ALPHABETIC-UPPER', 'REGEXP_LIKE({}, ''^[A-Z]+$'')'),
+            (' IS ALPHANUMERIC', 'REGEXP_LIKE({}, ''^[A-Za-z0-9]+$'')'),
+        ]
+        
+        for cobol_class, plsql_class in class_conditions:
+            if cobol_class in condition.upper():
+                field = condition.upper().replace(cobol_class, '').strip()
+                parsed_field = self.parse_move_source(field)
+                return plsql_class.format(parsed_field)
+        
+        # Handle sign conditions (IS POSITIVE, IS NEGATIVE, IS ZERO)
+        sign_conditions = [
+            (' IS POSITIVE', ' > 0'),
+            (' IS NEGATIVE', ' < 0'),
+            (' IS ZERO', ' = 0'),
+        ]
+        
+        for cobol_sign, plsql_sign in sign_conditions:
+            if cobol_sign in condition.upper():
+                field = condition.upper().replace(cobol_sign, '').strip()
+                parsed_field = self.parse_move_source(field)
+                return f"{parsed_field}{plsql_sign}"
+        
+        # Handle comparison operators
+        operators = [
+            (' NOT = ', ' != '),
+            (' NOT EQUAL ', ' != '),
+            (' = ', ' = '),
+            (' EQUAL ', ' = '),
+            (' > ', ' > '),
+            (' GREATER ', ' > '),
+            (' < ', ' < '),
+            (' LESS ', ' < '),
+            (' >= ', ' >= '),
+            (' GREATER OR EQUAL ', ' >= '),
+            (' <= ', ' <= '),
+            (' LESS OR EQUAL ', ' <= '),
+        ]
+        
+        for cobol_op, plsql_op in operators:
+            if cobol_op in condition.upper():
+                parts = condition.upper().split(cobol_op)
+                if len(parts) == 2:
+                    left = self.parse_move_source(parts[0].strip())
+                    right = self.parse_move_source(parts[1].strip())
+                    return f"{left}{plsql_op}{right}"
+        
+        # Handle OR conditions
+        if ' OR ' in condition.upper():
+            or_parts = condition.upper().split(' OR ')
+            parsed_parts = [self.parse_condition(part.strip()) for part in or_parts]
+            return f"({' OR '.join(parsed_parts)})"
+        
+        # Handle AND conditions
+        if ' AND ' in condition.upper():
+            and_parts = condition.upper().split(' AND ')
+            parsed_parts = [self.parse_condition(part.strip()) for part in and_parts]
+            return f"({' AND '.join(parsed_parts)})"
+        
+        # Handle special values
+        upper_condition = condition.upper()
+        if upper_condition in self.special_values:
+            return self.special_values[upper_condition]
+        
+        # Handle boolean variables
+        if upper_condition in ['TRUE', 'FALSE']:
+            return upper_condition.lower()
+        
+        # Handle qualified names and regular variables
+        return self.parse_move_source(condition)
+    
+    def parse_if_statement_enhanced(self, line: str) -> Optional[Dict[str, Any]]:
+        """Parse IF statement with enhanced condition handling"""
+        # Enhanced IF patterns
+        patterns = [
+            r'^IF\s+(.+?)(?:\s+THEN)?$',
+            r'^IF\s+(.+?)\s+THEN\s+(.+)$',
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, line, re.IGNORECASE)
+            if match:
+                condition = match.group(1).strip()
+                then_action = match.group(2).strip() if len(match.groups()) > 1 else None
+                
+                return {
+                    'op': 'IF',
+                    'condition': condition,
+                    'then_action': then_action,
+                    'raw': line
+                }
+        
+        return None
+    
+    def parse_evaluate_statement_enhanced(self, line: str) -> Optional[Dict[str, Any]]:
+        """Parse EVALUATE statement"""
+        # EVALUATE patterns
+        patterns = [
+            r'^EVALUATE\s+(.+)$',
+            r'^EVALUATE\s+TRUE$',
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, line, re.IGNORECASE)
+            if match:
+                evaluate_expr = match.group(1).strip() if len(match.groups()) > 0 else 'TRUE'
+                
+                return {
+                    'op': 'EVALUATE',
+                    'expression': evaluate_expr,
+                    'raw': line
+                }
+        
+        return None
+    
+    def parse_when_statement_enhanced(self, line: str) -> Optional[Dict[str, Any]]:
+        """Parse WHEN statement with enhanced support for ranges and multiple values"""
+        # WHEN patterns
+        patterns = [
+            r'^WHEN\s+(.+?)(?:\s+THEN)?$',
+            r'^WHEN\s+(.+?)\s+THEN\s+(.+)$',
+            r'^WHEN\s+OTHER$',
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, line, re.IGNORECASE)
+            if match:
+                condition = match.group(1).strip() if len(match.groups()) > 0 else 'OTHER'
+                then_action = match.group(2).strip() if len(match.groups()) > 1 else None
+                
+                return {
+                    'op': 'WHEN',
+                    'condition': condition,
+                    'then_action': then_action,
+                    'raw': line
+                }
+        
+        return None
+    
+    def parse_when_condition(self, condition: str) -> str:
+        """Parse WHEN condition with support for ranges, multiple values, and ALSO"""
+        condition = condition.strip()
+        
+        # Handle OTHER
+        if condition.upper() == 'OTHER':
+            return 'ELSE'
+        
+        # Handle ANY
+        if condition.upper() == 'ANY':
+            return 'TRUE'
+        
+        # Handle ranges with THRU
+        if ' THRU ' in condition.upper():
+            parts = condition.upper().split(' THRU ')
+            if len(parts) == 2:
+                start = self.parse_move_source(parts[0].strip())
+                end = self.parse_move_source(parts[1].strip())
+                return f"BETWEEN {start} AND {end}"
+        
+        # Handle multiple values with commas
+        if ',' in condition:
+            values = [self.parse_move_source(val.strip()) for val in condition.split(',')]
+            return f"IN ({', '.join(values)})"
+        
+        # Handle ALSO (multiple variables)
+        if ' ALSO ' in condition.upper():
+            also_parts = condition.upper().split(' ALSO ')
+            parsed_parts = [self.parse_move_source(part.strip()) for part in also_parts]
+            return ' AND '.join(parsed_parts)
+        
+        # Handle regular conditions
+        return self.parse_condition(condition)
+    
+    def convert_if_statement_enhanced(self, stmt: Dict[str, Any]) -> str:
+        """Convert IF statement to PL/SQL"""
+        condition = stmt.get('condition', '')
+        then_action = stmt.get('then_action', '')
+        
+        # Parse condition
+        parsed_condition = self.parse_condition(condition)
+        
+        if then_action:
+            # IF with immediate action
+            parsed_action = self.clean_expression(then_action)
+            return f"IF {parsed_condition} THEN\n    {parsed_action};"
+        else:
+            # IF without immediate action (block structure)
+            return f"IF {parsed_condition} THEN"
+    
+    def convert_evaluate_statement_enhanced(self, stmt: Dict[str, Any]) -> str:
+        """Convert EVALUATE statement to PL/SQL"""
+        expression = stmt.get('expression', 'TRUE')
+        parsed_expr = self.parse_condition(expression)
+        
+        return f"CASE {parsed_expr}"
+    
+    def convert_when_statement_enhanced(self, stmt: Dict[str, Any]) -> str:
+        """Convert WHEN statement to PL/SQL with enhanced support"""
+        condition = stmt.get('condition', '')
+        then_action = stmt.get('then_action', '')
+        
+        parsed_condition = self.parse_when_condition(condition)
+        
+        if parsed_condition == 'ELSE':
+            return "ELSE"
+        else:
+            if then_action:
+                parsed_action = self.clean_expression(then_action)
+                return f"WHEN {parsed_condition} THEN\n    {parsed_action};"
+            else:
+                return f"WHEN {parsed_condition} THEN"
 
     def parse_cobol_to_ir(self, cobol_content: str) -> Dict[str, Any]:
         """Parsea COBOL a representación intermedia mejorada"""
@@ -471,8 +802,8 @@ class EnhancedCobolConverter:
         """Parsea una sentencia COBOL"""
         line = line.strip()
         
-        # Palabras clave de cierre COBOL - ignorar
-        if re.match(r'^(END-EXEC|END-IF|END-EVALUATE|END-PERFORM|END-READ|END-WRITE|END-STRING|END-UNSTRING)\.?$', line, re.IGNORECASE):
+        # Palabras clave de cierre COBOL - ignorar (excepto END-IF y END-EVALUATE que se procesan después)
+        if re.match(r'^(END-EXEC|END-PERFORM|END-READ|END-WRITE|END-STRING|END-UNSTRING)\.?$', line, re.IGNORECASE):
             return None
         
         # MACROS COBOL (líneas que inician con @)
@@ -509,12 +840,40 @@ class EnhancedCobolConverter:
         if move_result:
             return move_result
         
-        # IF
-        if_match = re.match(r'IF\s+(.+?)\s+THEN', line, re.IGNORECASE)
-        if if_match:
+        # IF - Enhanced parsing
+        if_result = self.parse_if_statement_enhanced(line)
+        if if_result:
+            return if_result
+        
+        # EVALUATE - Enhanced parsing
+        evaluate_result = self.parse_evaluate_statement_enhanced(line)
+        if evaluate_result:
+            return evaluate_result
+        
+        # WHEN - Enhanced parsing
+        when_result = self.parse_when_statement_enhanced(line)
+        if when_result:
+            return when_result
+        
+        # ELSE
+        if re.match(r'ELSE\.?$', line, re.IGNORECASE):
             return {
-                "op": "IF",
-                "condition": if_match.group(1).strip()
+                "op": "ELSE",
+                "raw": line
+            }
+        
+        # END-IF
+        if re.match(r'END-IF\.?$', line, re.IGNORECASE):
+            return {
+                "op": "END_IF",
+                "raw": line
+            }
+        
+        # END-EVALUATE
+        if re.match(r'END-EVALUATE\.?$', line, re.IGNORECASE):
+            return {
+                "op": "END_EVALUATE",
+                "raw": line
             }
         
         # DISPLAY
@@ -665,12 +1024,29 @@ class EnhancedCobolConverter:
             return f"{base_indent}WHILE NOT ({condition_clean}) LOOP\n{base_indent}  {target_clean}();\n{base_indent}END LOOP;"
         
         elif op == "MOVE" or op == "MOVE_CORRESPONDING":
-            return self.convert_move_statement_enhanced(stmt)
+            result = self.convert_move_statement_enhanced(stmt)
+            return self._apply_indentation(result, base_indent)
         
         elif op == "IF":
-            condition = stmt.get("condition", "")
-            condition_clean = self.clean_expression(condition)
-            return f"{base_indent}IF {condition_clean} THEN"
+            result = self.convert_if_statement_enhanced(stmt)
+            return self._apply_indentation(result, base_indent)
+        
+        elif op == "EVALUATE":
+            result = self.convert_evaluate_statement_enhanced(stmt)
+            return self._apply_indentation(result, base_indent)
+        
+        elif op == "WHEN":
+            result = self.convert_when_statement_enhanced(stmt)
+            return self._apply_indentation(result, base_indent)
+        
+        elif op == "END_IF":
+            return f"{base_indent}END IF;"
+        
+        elif op == "END_EVALUATE":
+            return f"{base_indent}END CASE;"
+        
+        elif op == "ELSE":
+            return f"{base_indent}ELSE"
         
         elif op == "DISPLAY":
             message = stmt.get("message", "")
@@ -882,19 +1258,13 @@ END {program_name_clean};
         # Generar procedimiento MAIN
         main_lines = []
         for proc in ir.get("procedures", []):
-            for stmt in proc.get("statements", []):
-                out = self.apply_rule(stmt)
-                main_lines.append(out)
+            main_lines.extend(self._process_statements_with_context(proc.get("statements", []), "    "))
         
         # Generar procedimientos individuales
         procedure_bodies = []
         for proc in ir.get("procedures", []):
             proc_name = self.clean_expression(proc.get("name", ""))
-            proc_statements = []
-            
-            for stmt in proc.get("statements", []):
-                out = self.apply_rule(stmt)
-                proc_statements.append(out)
+            proc_statements = self._process_statements_with_context(proc.get("statements", []), "    ")
             
             if proc_statements:
                 procedure_bodies.append(f"""  PROCEDURE {proc_name} IS
