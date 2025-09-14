@@ -179,6 +179,36 @@ class EnhancedCobolConverter:
         
         return None
     
+    def parse_if_continuation(self, line: str) -> Optional[Dict[str, Any]]:
+        """Parse IF continuation - conditions that are continuation of previous IF"""
+        line = line.strip()
+        
+        # Check if line is a condition that continues a previous IF
+        # Pattern: WS-VARIABLE-NAME GREATER 0 (or similar conditions)
+        continuation_patterns = [
+            r'^([A-Z0-9_-]+)\s+(GREATER|LESS|EQUAL|NOT\s+EQUAL)\s+(.+)$',
+            r'^([A-Z0-9_-]+)\s+(>|<|=|!=)\s+(.+)$',
+        ]
+        
+        for pattern in continuation_patterns:
+            match = re.match(pattern, line, re.IGNORECASE)
+            if match:
+                variable = match.group(1)
+                operator = match.group(2)
+                value = match.group(3)
+                
+                # Check if this looks like a COBOL condition (contains hyphens and is uppercase)
+                if '-' in variable and variable.isupper():
+                    return {
+                        'op': 'IF_CONTINUATION',
+                        'variable': variable,
+                        'operator': operator,
+                        'value': value,
+                        'raw': line
+                    }
+        
+        return None
+    
     def convert_move_statement_enhanced(self, stmt: Dict[str, Any]) -> str:
         """Convert MOVE statement to PL/SQL with proper formatting"""
         source = stmt.get('src', '')
@@ -228,6 +258,32 @@ class EnhancedCobolConverter:
         # For now, we'll use a default value of 0, but this should be improved
         # to track the actual source from the previous MOVE statement
         return f"{base_indent}{variable_clean} := 0; -- MOVE continuation (source from previous MOVE)"
+    
+    def convert_if_continuation(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert IF continuation to PL/SQL"""
+        variable = stmt.get("variable", "")
+        operator = stmt.get("operator", "")
+        value = stmt.get("value", "")
+        
+        variable_clean = self.clean_expression(variable)
+        value_clean = self.clean_expression(value)
+        
+        # Convert COBOL operators to PL/SQL operators
+        operator_map = {
+            'GREATER': '>',
+            'LESS': '<',
+            'EQUAL': '=',
+            'NOT EQUAL': '!=',
+            '>': '>',
+            '<': '<',
+            '=': '=',
+            '!=': '!='
+        }
+        
+        plsql_operator = operator_map.get(operator.upper(), operator)
+        
+        # Return the continuation condition with THEN to complete the IF
+        return f"{base_indent}{variable_clean} {plsql_operator} {value_clean} THEN"
     
     def _apply_indentation(self, text: str, base_indent: str) -> str:
         """Apply proper indentation to multi-line PL/SQL code"""
@@ -813,6 +869,18 @@ class EnhancedCobolConverter:
                 parsed_field = self.parse_move_source(field)
                 return f"{parsed_field}{plsql_sign}"
         
+        # Handle OR conditions FIRST (before comparison operators)
+        if ' OR ' in condition.upper():
+            or_parts = condition.upper().split(' OR ')
+            parsed_parts = [self.parse_condition(part.strip()) for part in or_parts]
+            return f"({' OR '.join(parsed_parts)})"
+        
+        # Handle AND conditions FIRST (before comparison operators)
+        if ' AND ' in condition.upper():
+            and_parts = condition.upper().split(' AND ')
+            parsed_parts = [self.parse_condition(part.strip()) for part in and_parts]
+            return f"({' AND '.join(parsed_parts)})"
+        
         # Handle comparison operators
         operators = [
             (' NOT = ', ' != '),
@@ -837,18 +905,6 @@ class EnhancedCobolConverter:
                     right = self.parse_move_source(parts[1].strip())
                     return f"{left}{plsql_op}{right}"
         
-        # Handle OR conditions
-        if ' OR ' in condition.upper():
-            or_parts = condition.upper().split(' OR ')
-            parsed_parts = [self.parse_condition(part.strip()) for part in or_parts]
-            return f"({' OR '.join(parsed_parts)})"
-        
-        # Handle AND conditions
-        if ' AND ' in condition.upper():
-            and_parts = condition.upper().split(' AND ')
-            parsed_parts = [self.parse_condition(part.strip()) for part in and_parts]
-            return f"({' AND '.join(parsed_parts)})"
-        
         # Handle special values
         upper_condition = condition.upper()
         if upper_condition in self.special_values:
@@ -863,10 +919,12 @@ class EnhancedCobolConverter:
     
     def parse_if_statement_enhanced(self, line: str) -> Optional[Dict[str, Any]]:
         """Parse IF statement with enhanced condition handling"""
-        # Enhanced IF patterns
+        # Enhanced IF patterns - improved to handle multiple conditions with OR/AND
         patterns = [
-            r'^IF\s+(.+?)(?:\s+THEN)?$',
+            # IF with THEN and action
             r'^IF\s+(.+?)\s+THEN\s+(.+)$',
+            # IF with just condition (no THEN)
+            r'^IF\s+(.+)$',
         ]
         
         for pattern in patterns:
@@ -875,10 +933,18 @@ class EnhancedCobolConverter:
                 condition = match.group(1).strip()
                 then_action = match.group(2).strip() if len(match.groups()) > 1 else None
                 
+                # Clean up the condition - remove trailing THEN if present
+                if condition.upper().endswith(' THEN'):
+                    condition = condition[:-5].strip()
+                
+                # Check if condition ends with OR/AND (needs continuation)
+                needs_continuation = condition.upper().endswith(' OR') or condition.upper().endswith(' AND')
+                
                 return {
                     'op': 'IF',
                     'condition': condition,
                     'then_action': then_action,
+                    'needs_continuation': needs_continuation,
                     'raw': line
                 }
         
@@ -967,17 +1033,24 @@ class EnhancedCobolConverter:
         """Convert IF statement to PL/SQL"""
         condition = stmt.get('condition', '')
         then_action = stmt.get('then_action', '')
+        needs_continuation = stmt.get('needs_continuation', False)
         
         # Parse condition
         parsed_condition = self.parse_condition(condition)
         
-        if then_action:
-            # IF with immediate action
-            parsed_action = self.clean_expression(then_action)
-            return f"IF {parsed_condition} THEN\n    {parsed_action};"
+        # If the condition ends with OR/AND, don't add THEN yet
+        if needs_continuation:
+            # Return the condition without THEN - continuation will be handled separately
+            return f"IF {parsed_condition}"
         else:
-            # IF without immediate action (block structure)
-            return f"IF {parsed_condition} THEN"
+            # Complete IF statement
+            if then_action:
+                # IF with immediate action
+                parsed_action = self.clean_expression(then_action)
+                return f"IF {parsed_condition} THEN\n    {parsed_action};"
+            else:
+                # IF without immediate action (block structure)
+                return f"IF {parsed_condition} THEN"
     
     def convert_evaluate_statement_enhanced(self, stmt: Dict[str, Any]) -> str:
         """Convert EVALUATE statement to PL/SQL"""
@@ -1325,6 +1398,11 @@ class EnhancedCobolConverter:
         if move_continuation_result:
             return move_continuation_result
         
+        # IF continuation - detect conditions that are continuation of previous IF
+        if_continuation_result = self.parse_if_continuation(line)
+        if if_continuation_result:
+            return if_continuation_result
+        
         # IF - Enhanced parsing
         if_result = self.parse_if_statement_enhanced(line)
         if if_result:
@@ -1570,6 +1648,9 @@ class EnhancedCobolConverter:
         elif op == "IF":
             result = self.convert_if_statement_enhanced(stmt)
             return self._apply_indentation(result, base_indent)
+        
+        elif op == "IF_CONTINUATION":
+            return self.convert_if_continuation(stmt, base_indent)
         
         elif op == "EVALUATE":
             result = self.convert_evaluate_statement_enhanced(stmt)
