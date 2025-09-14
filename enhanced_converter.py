@@ -552,6 +552,23 @@ class EnhancedCobolConverter:
         
         return None
     
+    def parse_continue_statement_enhanced(self, line: str) -> Optional[Dict[str, Any]]:
+        """Parse CONTINUE statement patterns"""
+        line = line.strip()
+        
+        # CONTINUE statement (standalone)
+        continue_match = re.match(r'^CONTINUE\.?$', line, re.IGNORECASE)
+        if continue_match:
+            return {
+                "op": "CONTINUE",
+                "raw": line
+            }
+        
+        # CONTINUE in conditional context (already parsed by IF/WHEN structures)
+        # This is handled by the context where CONTINUE appears
+        
+        return None
+    
     def convert_set_condition(self, stmt: Dict[str, Any], base_indent: str) -> str:
         """Convert SET condition-name TO TRUE/FALSE to PL/SQL"""
         condition_name = stmt.get("condition_name", "")
@@ -698,6 +715,28 @@ class EnhancedCobolConverter:
 {base_indent}-- {result_clean}.field1 := {source_clean}.field1 + {target_clean}.field1;
 {base_indent}-- {result_clean}.field2 := {source_clean}.field2 + {target_clean}.field2;
 {base_indent}-- ... (continue for all corresponding fields)"""
+    
+    def convert_continue(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert CONTINUE statement to PL/SQL"""
+        # CONTINUE in COBOL means "do nothing" - convert to NULL in PL/SQL
+        return f"{base_indent}NULL; -- CONTINUE (no action)"
+    
+    def convert_continue_in_if(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert CONTINUE in IF context to PL/SQL"""
+        # This is handled by the IF structure itself
+        # CONTINUE in IF becomes NULL or logic inversion
+        return f"{base_indent}NULL; -- CONTINUE in IF context"
+    
+    def convert_continue_in_when(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert CONTINUE in WHEN context to PL/SQL"""
+        # This is handled by the CASE/EVALUATE structure itself
+        # CONTINUE in WHEN becomes NULL or case removal
+        return f"{base_indent}NULL; -- CONTINUE in WHEN context"
+    
+    def convert_continue_in_loop(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert CONTINUE in loop context to PL/SQL"""
+        # CONTINUE in loops can be converted to CONTINUE (Oracle 11g+) or NULL
+        return f"{base_indent}CONTINUE; -- CONTINUE in loop context (Oracle 11g+)"
     
     def parse_condition(self, condition: str) -> str:
         """Parse COBOL condition to PL/SQL condition"""
@@ -1350,6 +1389,11 @@ class EnhancedCobolConverter:
         if add_result:
             return add_result
         
+        # CONTINUE OPERATIONS - Enhanced parsing
+        continue_result = self.parse_continue_statement_enhanced(line)
+        if continue_result:
+            return continue_result
+        
         # EXEC SQL blocks
         if re.match(r'EXEC\s+SQL', line, re.IGNORECASE):
             return {
@@ -1567,6 +1611,18 @@ class EnhancedCobolConverter:
         
         elif op == "ADD_CORRESPONDING_GIVING":
             return self.convert_add_corresponding_giving(stmt, base_indent)
+        
+        elif op == "CONTINUE":
+            return self.convert_continue(stmt, base_indent)
+        
+        elif op == "CONTINUE_IN_IF":
+            return self.convert_continue_in_if(stmt, base_indent)
+        
+        elif op == "CONTINUE_IN_WHEN":
+            return self.convert_continue_in_when(stmt, base_indent)
+        
+        elif op == "CONTINUE_IN_LOOP":
+            return self.convert_continue_in_loop(stmt, base_indent)
         
         elif op == "SQL_INCLUDE":
             table_name = stmt.get("table", "")
