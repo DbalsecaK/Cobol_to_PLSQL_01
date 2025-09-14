@@ -296,6 +296,117 @@ class EnhancedCobolConverter:
         
         return result
     
+    def convert_open_file(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert OPEN FILE operation to PL/SQL UTL_FILE"""
+        mode = stmt.get("mode", "INPUT")
+        file_name = stmt.get("file_name", "")
+        file_clean = self.clean_expression(file_name)
+        
+        # Map COBOL modes to UTL_FILE modes
+        mode_map = {
+            "INPUT": "R",  # Read mode
+            "OUTPUT": "W", # Write mode
+            "I-O": "A"     # Append mode (closest to I-O)
+        }
+        
+        utl_mode = mode_map.get(mode, "R")
+        
+        return f"""{base_indent}-- OPEN {mode} {file_clean}
+{base_indent}BEGIN
+{base_indent}    {file_clean} := UTL_FILE.FOPEN('MI_DIRECTORIO', '{file_clean.lower()}.dat', '{utl_mode}');
+{base_indent}EXCEPTION
+{base_indent}    WHEN UTL_FILE.INVALID_PATH THEN
+{base_indent}        DBMS_OUTPUT.PUT_LINE('Directorio inválido para {file_clean}');
+{base_indent}        v_file_status := 'ERROR';
+{base_indent}    WHEN UTL_FILE.INVALID_FILENAME THEN
+{base_indent}        DBMS_OUTPUT.PUT_LINE('Nombre de archivo inválido para {file_clean}');
+{base_indent}        v_file_status := 'ERROR';
+{base_indent}    WHEN UTL_FILE.INVALID_OPERATION THEN
+{base_indent}        DBMS_OUTPUT.PUT_LINE('Operación inválida en {file_clean}');
+{base_indent}        v_file_status := 'ERROR';
+{base_indent}END;"""
+    
+    def convert_close_file(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert CLOSE FILE operation to PL/SQL UTL_FILE"""
+        file_name = stmt.get("file_name", "")
+        file_clean = self.clean_expression(file_name)
+        
+        return f"""{base_indent}-- CLOSE {file_clean}
+{base_indent}IF UTL_FILE.IS_OPEN({file_clean}) THEN
+{base_indent}    UTL_FILE.FCLOSE({file_clean});
+{base_indent}END IF;"""
+    
+    def convert_read_file(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert READ FILE operation to PL/SQL UTL_FILE"""
+        file_name = stmt.get("file_name", "")
+        file_clean = self.clean_expression(file_name)
+        raw = stmt.get("raw", "")
+        
+        # Check if it's a READ with AT END clause
+        has_at_end = stmt.get("has_at_end", False) or "AT END" in raw.upper()
+        has_not_at_end = stmt.get("has_not_at_end", False) or "NOT AT END" in raw.upper()
+        
+        if has_at_end or has_not_at_end:
+            return f"""{base_indent}-- READ {file_clean} WITH AT END/NOT AT END
+{base_indent}BEGIN
+{base_indent}    UTL_FILE.GET_LINE({file_clean}, {file_clean}_record);
+{base_indent}    -- NOT AT END processing
+{base_indent}    -- Process record here
+{base_indent}EXCEPTION
+{base_indent}    WHEN NO_DATA_FOUND THEN
+{base_indent}        -- AT END processing
+{base_indent}        v_eof_flag := TRUE;
+{base_indent}        DBMS_OUTPUT.PUT_LINE('Fin de archivo alcanzado en {file_clean}');
+{base_indent}    WHEN UTL_FILE.READ_ERROR THEN
+{base_indent}        DBMS_OUTPUT.PUT_LINE('Error de lectura en {file_clean}');
+{base_indent}        v_file_status := 'ERROR';
+{base_indent}END;"""
+        else:
+            return f"""{base_indent}-- READ {file_clean}
+{base_indent}BEGIN
+{base_indent}    UTL_FILE.GET_LINE({file_clean}, {file_clean}_record);
+{base_indent}    -- Process record here
+{base_indent}EXCEPTION
+{base_indent}    WHEN NO_DATA_FOUND THEN
+{base_indent}        v_eof_flag := TRUE;
+{base_indent}    WHEN UTL_FILE.READ_ERROR THEN
+{base_indent}        DBMS_OUTPUT.PUT_LINE('Error de lectura en {file_clean}');
+{base_indent}        v_file_status := 'ERROR';
+{base_indent}END;"""
+    
+    def convert_write_file(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert WRITE FILE operation to PL/SQL UTL_FILE"""
+        file_name = stmt.get("file_name", "")
+        file_clean = self.clean_expression(file_name)
+        raw = stmt.get("raw", "")
+        
+        # Check if it's a WRITE with AFTER clause
+        after_match = re.search(r'AFTER\s+(\d+)\s+LINES?', raw, re.IGNORECASE)
+        if after_match:
+            lines = after_match.group(1)
+            return f"""{base_indent}-- WRITE {file_clean} AFTER {lines} LINES
+{base_indent}BEGIN
+{base_indent}    FOR i IN 1..{lines} LOOP
+{base_indent}        UTL_FILE.PUT_LINE({file_clean}, '');
+{base_indent}    END LOOP;
+{base_indent}    UTL_FILE.PUT_LINE({file_clean}, {file_clean}_record);
+{base_indent}    UTL_FILE.FFLUSH({file_clean});
+{base_indent}EXCEPTION
+{base_indent}    WHEN UTL_FILE.WRITE_ERROR THEN
+{base_indent}        DBMS_OUTPUT.PUT_LINE('Error de escritura en {file_clean}');
+{base_indent}        v_file_status := 'ERROR';
+{base_indent}END;"""
+        else:
+            return f"""{base_indent}-- WRITE {file_clean}
+{base_indent}BEGIN
+{base_indent}    UTL_FILE.PUT_LINE({file_clean}, {file_clean}_record);
+{base_indent}    UTL_FILE.FFLUSH({file_clean});
+{base_indent}EXCEPTION
+{base_indent}    WHEN UTL_FILE.WRITE_ERROR THEN
+{base_indent}        DBMS_OUTPUT.PUT_LINE('Error de escritura en {file_clean}');
+{base_indent}        v_file_status := 'ERROR';
+{base_indent}END;"""
+    
     def parse_condition(self, condition: str) -> str:
         """Parse COBOL condition to PL/SQL condition"""
         condition = condition.strip()
@@ -900,6 +1011,43 @@ class EnhancedCobolConverter:
         if re.match(r'ROLLBACK', line, re.IGNORECASE):
             return {"op": "ROLLBACK"}
         
+        # FILE OPERATIONS - OPEN
+        open_file_match = re.match(r'OPEN\s+(INPUT|OUTPUT|I-O)\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
+        if open_file_match:
+            return {
+                "op": "OPEN_FILE",
+                "mode": open_file_match.group(1).upper(),
+                "file_name": open_file_match.group(2)
+            }
+        
+        # FILE OPERATIONS - CLOSE
+        close_file_match = re.match(r'CLOSE\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
+        if close_file_match:
+            return {
+                "op": "CLOSE_FILE",
+                "file_name": close_file_match.group(1)
+            }
+        
+        # FILE OPERATIONS - READ (with AT END/NOT AT END support)
+        read_file_match = re.match(r'READ\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
+        if read_file_match:
+            return {
+                "op": "READ_FILE",
+                "file_name": read_file_match.group(1),
+                "raw": line,
+                "has_at_end": "AT END" in line.upper(),
+                "has_not_at_end": "NOT AT END" in line.upper()
+            }
+        
+        # FILE OPERATIONS - WRITE
+        write_file_match = re.match(r'WRITE\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
+        if write_file_match:
+            return {
+                "op": "WRITE_FILE",
+                "file_name": write_file_match.group(1),
+                "raw": line
+            }
+        
         # EXEC SQL blocks
         if re.match(r'EXEC\s+SQL', line, re.IGNORECASE):
             return {
@@ -1067,6 +1215,18 @@ class EnhancedCobolConverter:
         elif op == "ROLLBACK":
             return f"{base_indent}ROLLBACK;"
         
+        elif op == "OPEN_FILE":
+            return self.convert_open_file(stmt, base_indent)
+        
+        elif op == "CLOSE_FILE":
+            return self.convert_close_file(stmt, base_indent)
+        
+        elif op == "READ_FILE":
+            return self.convert_read_file(stmt, base_indent)
+        
+        elif op == "WRITE_FILE":
+            return self.convert_write_file(stmt, base_indent)
+        
         elif op == "SQL_INCLUDE":
             table_name = stmt.get("table", "")
             table_clean = self.clean_expression(table_name)
@@ -1195,6 +1355,14 @@ class EnhancedCobolConverter:
         for file in ir.get("files", []):
             file_name = self.clean_expression(file.get("name", ""))
             file_declarations.append(f"  {file_name} UTL_FILE.FILE_TYPE;")
+        
+        # Agregar variables de control de archivos si hay archivos
+        if ir.get("files"):
+            file_declarations.extend([
+                "  v_file_status VARCHAR2(10) := 'OK';",
+                "  v_eof_flag BOOLEAN := FALSE;",
+                "  v_directorio VARCHAR2(30) := 'MI_DIRECTORIO';"
+            ])
         
         # Generar declaraciones de registros
         record_declarations = []
