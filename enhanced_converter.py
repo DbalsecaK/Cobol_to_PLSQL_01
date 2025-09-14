@@ -19,6 +19,21 @@ class EnhancedCobolConverter:
         self.sql_declarations = []
         self.procedures = []
         
+        # Configuración de valores especiales COBOL para MOVE statements
+        self.special_values = {
+            'SPACES': "''",  # Empty string
+            'ZEROS': '0',
+            'ZERO': '0',
+            'HIGH-VALUES': "CHR(255)",
+            'LOW-VALUES': "CHR(0)",
+            'QUOTES': "'\"'",
+        }
+        
+        # Patrones para diferentes tipos de valores
+        self.numeric_pattern = re.compile(r'^\d+(\.\d+)?$')
+        self.string_literal_pattern = re.compile(r'^[\'"](.*?)[\'"]$')
+        self.identifier_pattern = re.compile(r'^[A-Z0-9_-]+$', re.IGNORECASE)
+        
     def clean_expression(self, expr: str) -> str:
         """Limpia expresiones COBOL para PL/SQL"""
         if not expr:
@@ -31,6 +46,150 @@ class EnhancedCobolConverter:
         expr = re.sub(r'\s+', ' ', expr.strip())
         
         return expr
+    
+    def clean_identifier(self, identifier: str) -> str:
+        """Clean and normalize COBOL identifiers for PL/SQL"""
+        cleaned = re.sub(r'\s+', ' ', identifier.strip())
+        return cleaned.lower()
+    
+    def parse_move_source(self, source: str) -> str:
+        """Parse MOVE source expression with all variations"""
+        source = source.strip()
+        
+        # Handle string literals
+        if (source.startswith("'") and source.endswith("'")) or \
+           (source.startswith('"') and source.endswith('"')):
+            return source
+        
+        # Handle numeric literals
+        if self.numeric_pattern.match(source):
+            return source
+        
+        # Handle special COBOL values
+        upper_source = source.upper()
+        if upper_source in self.special_values:
+            return self.special_values[upper_source]
+        
+        # Handle qualified names (FIELD OF GROUP)
+        if ' OF ' in upper_source:
+            parts = source.split(' OF ')
+            if len(parts) == 2:
+                field = self.clean_identifier(parts[0])
+                group = self.clean_identifier(parts[1])
+                return f"{group}.{field}"
+        
+        # Handle subscripted variables (FIELD(INDEX))
+        if '(' in source and ')' in source:
+            match = re.match(r'^([A-Z0-9_-]+)\(([A-Z0-9_-]+)\)', source, re.IGNORECASE)
+            if match:
+                var_name = self.clean_identifier(match.group(1))
+                index = self.clean_identifier(match.group(2))
+                return f"{var_name}({index})"
+        
+        # Regular variable name
+        return self.clean_identifier(source)
+    
+    def parse_move_targets(self, targets: str) -> List[str]:
+        """Parse multiple targets in MOVE statement"""
+        targets_list = []
+        current_target = ""
+        paren_count = 0
+        in_quotes = False
+        quote_char = None
+        
+        i = 0
+        while i < len(targets):
+            char = targets[i]
+            
+            # Handle quotes
+            if char in ['"', "'"] and not in_quotes:
+                in_quotes = True
+                quote_char = char
+            elif char == quote_char and in_quotes:
+                in_quotes = False
+                quote_char = None
+            
+            # Handle parentheses (for subscripted variables and qualified names)
+            if not in_quotes:
+                if char == '(':
+                    paren_count += 1
+                elif char == ')':
+                    paren_count -= 1
+                elif char == ',' and paren_count == 0:
+                    if current_target.strip():
+                        targets_list.append(current_target.strip())
+                    current_target = ""
+                    i += 1
+                    continue
+            
+            current_target += char
+            i += 1
+        
+        if current_target.strip():
+            targets_list.append(current_target.strip())
+        
+        return targets_list
+    
+    def parse_move_statement_enhanced(self, line: str) -> Optional[Dict[str, Any]]:
+        """Parse a complete MOVE statement with all variations"""
+        # Enhanced regex patterns for MOVE statements
+        patterns = [
+            # MOVE with CORRESPONDING (debe ir primero para evitar conflictos)
+            r'^MOVE\s+CORRESPONDING\s+(.+?)\s+TO\s+(.+?)(?:\.|$)',
+            # Standard MOVE pattern
+            r'^MOVE\s+(.+?)\s+TO\s+(.+?)(?:\.|$)',
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, line, re.IGNORECASE)
+            if match:
+                source = match.group(1).strip()
+                targets = match.group(2).strip()
+                
+                # Check if it's CORRESPONDING
+                is_corresponding = 'CORRESPONDING' in line.upper()
+                
+                return {
+                    'op': 'MOVE_CORRESPONDING' if is_corresponding else 'MOVE',
+                    'src': source,
+                    'dst': targets,
+                    'raw': line,
+                    'is_corresponding': is_corresponding
+                }
+        
+        return None
+    
+    def convert_move_statement_enhanced(self, stmt: Dict[str, Any]) -> str:
+        """Convert MOVE statement to PL/SQL with proper formatting"""
+        source = stmt.get('src', '')
+        targets = stmt.get('dst', '')
+        is_corresponding = stmt.get('is_corresponding', False)
+        
+        if is_corresponding:
+            return self.convert_move_corresponding(source, targets)
+        
+        # Parse source
+        source_expr = self.parse_move_source(source)
+        
+        # Parse targets (handle multiple targets)
+        target_list = self.parse_move_targets(targets)
+        
+        # Generate assignments
+        assignments = []
+        for target in target_list:
+            target_expr = self.parse_move_source(target)
+            assignments.append(f"{target_expr} := {source_expr};")
+        
+        return "\n".join(assignments)
+    
+    def convert_move_corresponding(self, source: str, targets: str) -> str:
+        """Convert MOVE CORRESPONDING to PL/SQL"""
+        source_clean = self.clean_identifier(source)
+        targets_clean = self.clean_identifier(targets)
+        
+        return f"-- MOVE CORRESPONDING {source_clean} TO {targets_clean}\n" \
+               f"-- Note: This requires field-by-field mapping analysis\n" \
+               f"-- {targets_clean} := {source_clean};"
 
     def parse_cobol_to_ir(self, cobol_content: str) -> Dict[str, Any]:
         """Parsea COBOL a representación intermedia mejorada"""
@@ -317,14 +476,10 @@ class EnhancedCobolConverter:
                 "condition": perform_until_match.group(2)
             }
         
-        # MOVE
-        move_match = re.match(r'MOVE\s+(.+?)\s+TO\s+(.+)', line, re.IGNORECASE)
-        if move_match:
-            return {
-                "op": "MOVE",
-                "from": move_match.group(1).strip(),
-                "to": move_match.group(2).strip()
-            }
+        # MOVE - Enhanced parsing
+        move_result = self.parse_move_statement_enhanced(line)
+        if move_result:
+            return move_result
         
         # IF
         if_match = re.match(r'IF\s+(.+?)\s+THEN', line, re.IGNORECASE)
@@ -481,12 +636,8 @@ class EnhancedCobolConverter:
             condition_clean = self.clean_expression(condition)
             return f"{base_indent}WHILE NOT ({condition_clean}) LOOP\n{base_indent}  {target_clean}();\n{base_indent}END LOOP;"
         
-        elif op == "MOVE":
-            from_val = stmt.get("from", "")
-            to_val = stmt.get("to", "")
-            from_clean = self.clean_expression(from_val)
-            to_clean = self.clean_expression(to_val)
-            return f"{base_indent}{to_clean} := {from_clean};"
+        elif op == "MOVE" or op == "MOVE_CORRESPONDING":
+            return self.convert_move_statement_enhanced(stmt)
         
         elif op == "IF":
             condition = stmt.get("condition", "")
