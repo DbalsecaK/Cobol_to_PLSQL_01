@@ -32,13 +32,109 @@ def parse_cobol_to_ir(file_path: str) -> Dict[str, Any]:
     variables = []
     ws_section = re.search(r'WORKING-STORAGE SECTION(.*?)(?=PROCEDURE DIVISION)', content, re.DOTALL | re.IGNORECASE)
     if ws_section:
-        var_matches = re.findall(r'^\s*01\s+([A-Z0-9_-]+)\s+PIC\s+([XS9]\(\d+\))', ws_section.group(1), re.MULTILINE | re.IGNORECASE)
-        for name, pic in var_matches:
+        # Buscar variables de nivel 01, 05, 77, 88
+        var_matches = re.findall(r'^\s*(01|05|77|88)\s+([A-Z0-9_-]+)\s+PIC\s+([XS9Z]\(\d+\)|[XS9Z]\d+)', ws_section.group(1), re.MULTILINE | re.IGNORECASE)
+        for level, name, pic in var_matches:
             name = name.upper()
-            pic_u = pic.upper()
-            size = int(re.findall(r'\((\d+)\)', pic_u)[0])
-            vtype = 'STRING' if pic_u.startswith('X(') else 'NUMERIC'
+            # Limpiar el PIC para extraer tipo y tamaño
+            pic_clean = pic.upper().strip()
+            
+            if 'X(' in pic_clean:
+                vtype = 'STRING'
+                size = int(pic_clean.split('(')[1].split(')')[0])
+            elif 'S9(' in pic_clean or '9(' in pic_clean:
+                vtype = 'NUMERIC'
+                size = int(pic_clean.split('(')[1].split(')')[0])
+            elif 'Z(' in pic_clean:
+                vtype = 'NUMERIC'
+                size = int(pic_clean.split('(')[1].split(')')[0])
+            elif pic_clean.startswith('X'):
+                vtype = 'STRING'
+                size = int(pic_clean[1:])
+            elif pic_clean.startswith('9') or pic_clean.startswith('S9'):
+                vtype = 'NUMERIC'
+                size = int(pic_clean.replace('S9', '9'))
+            else:
+                vtype = 'STRING'
+                size = 10  # Default size
+            
             variables.append({"name": name, "type": vtype, "size": size})
+    
+    # Extraer archivos definidos en FILE-CONTROL
+    files = []
+    file_control_section = re.search(r'FILE-CONTROL\.(.*?)(?=DATA DIVISION|PROCEDURE DIVISION)', content, re.DOTALL | re.IGNORECASE)
+    if file_control_section:
+        # Buscar definiciones SELECT ... ASSIGN TO ... FILE STATUS
+        file_matches = re.findall(r'SELECT\s+([A-Z0-9_-]+)\s+ASSIGN\s+TO\s+([A-Z0-9_-]+)\s+FILE\s+STATUS\s+IS\s+([A-Z0-9_-]+)', file_control_section.group(1), re.IGNORECASE)
+        for file_name, assign_name, status_var in file_matches:
+            files.append({
+                "name": file_name.upper(),
+                "assign": assign_name.upper(), 
+                "status": status_var.upper()
+            })
+    
+    # Extraer estructuras de archivos en FILE SECTION
+    file_structures = []
+    file_section = re.search(r'FILE SECTION\.(.*?)(?=WORKING-STORAGE SECTION|PROCEDURE DIVISION)', content, re.DOTALL | re.IGNORECASE)
+    if file_section:
+        # Buscar FD (File Descriptor) y estructuras de registro
+        fd_matches = re.findall(r'FD\s+([A-Z0-9_-]+)\.(.*?)(?=FD\s+|$)', file_section.group(1), re.DOTALL | re.IGNORECASE)
+        for fd_name, fd_content in fd_matches:
+            # Buscar registros 01 dentro del FD
+            record_matches = re.findall(r'^\s*01\s+([A-Z0-9_-]+)\s+PIC\s+([XS9Z]\(\d+\)|[XS9Z]\d+)', fd_content, re.MULTILINE | re.IGNORECASE)
+            for record_name, pic in record_matches:
+                pic_clean = pic.upper().strip()
+                if 'X(' in pic_clean:
+                    vtype = 'STRING'
+                    size = int(pic_clean.split('(')[1].split(')')[0])
+                elif 'S9(' in pic_clean or '9(' in pic_clean:
+                    vtype = 'NUMERIC'
+                    size = int(pic_clean.split('(')[1].split(')')[0])
+                else:
+                    vtype = 'STRING'
+                    size = 10
+                
+                file_structures.append({
+                    "file_name": fd_name.upper(),
+                    "record_name": record_name.upper(),
+                    "type": vtype,
+                    "size": size
+                })
+    
+    # Extraer declaraciones EXEC SQL de todo el archivo (INCLUDE, DECLARE CURSOR, etc.)
+    sql_declarations = []
+    exec_sql_matches = re.findall(r'EXEC\s+SQL\s+(.*?)END-EXEC\.', content, re.DOTALL | re.IGNORECASE)
+    for sql_content in exec_sql_matches:
+        sql_content = sql_content.strip()
+        if re.search(r'INCLUDE\s+(\w+)', sql_content, re.IGNORECASE):
+            # INCLUDE de tabla
+            include_match = re.search(r'INCLUDE\s+(\w+)', sql_content, re.IGNORECASE)
+            if include_match:
+                table_name = include_match.group(1).upper()
+                sql_declarations.append({
+                    "op": "SQL_INCLUDE",
+                    "table": table_name,
+                    "raw": f"EXEC SQL INCLUDE {table_name} END-EXEC."
+                })
+        elif re.search(r'DECLARE\s+(\w+)\s+CURSOR', sql_content, re.IGNORECASE):
+            # DECLARE CURSOR
+            cursor_match = re.search(r'DECLARE\s+(\w+)\s+CURSOR\s+(.*)', sql_content, re.IGNORECASE | re.DOTALL)
+            if cursor_match:
+                cursor_name = cursor_match.group(1).upper()
+                cursor_definition = cursor_match.group(2).strip()
+                sql_declarations.append({
+                    "op": "SQL_CURSOR_DECLARE",
+                    "cursor_name": cursor_name,
+                    "definition": cursor_definition,
+                    "raw": f"EXEC SQL DECLARE {cursor_name} CURSOR {cursor_definition} END-EXEC."
+                })
+        else:
+            # Otros EXEC SQL
+            sql_declarations.append({
+                "op": "SQL_GENERIC",
+                "content": sql_content,
+                "raw": f"EXEC SQL {sql_content} END-EXEC."
+            })
     
     # Extraer sentencias del PROCEDURE DIVISION
     statements = []
@@ -49,6 +145,9 @@ def parse_cobol_to_ir(file_path: str) -> Dict[str, Any]:
     return {
         "program": program_name,
         "variables": variables,
+        "files": files,
+        "file_structures": file_structures,
+        "sql_declarations": sql_declarations,
         "procedures": [
             {"name": "MAIN", "statements": statements}
         ]
@@ -142,6 +241,41 @@ def extract_statements_improved(proc_text: str) -> List[Dict[str, Any]]:
             if m:
                 proc_name = m.group(1)
                 stmts.append({"op":"PERFORM", "procedure": proc_name, "raw": ln})
+                i += 1
+                continue
+            
+            # OPEN file statement
+            m = re.search(r'^OPEN\s+(INPUT|OUTPUT|I-O)\s+([A-Z0-9_-]+)\.?$', ln, re.IGNORECASE)
+            if m:
+                mode = m.group(1).upper()
+                file_name = m.group(2).upper()
+                stmts.append({"op":"FILE_OPEN", "file": file_name, "mode": mode, "raw": ln})
+                i += 1
+                continue
+            
+            # CLOSE file statement
+            m = re.search(r'^CLOSE\s+([A-Z0-9_-]+)\.?$', ln, re.IGNORECASE)
+            if m:
+                file_name = m.group(1).upper()
+                stmts.append({"op":"FILE_CLOSE", "file": file_name, "raw": ln})
+                i += 1
+                continue
+            
+            # WRITE statement
+            m = re.search(r'^WRITE\s+([A-Z0-9_-]+)\s+FROM\s+([A-Z0-9_-]+)\.?$', ln, re.IGNORECASE)
+            if m:
+                record_name = m.group(1).upper()
+                from_var = m.group(2).upper()
+                stmts.append({"op":"FILE_WRITE", "record": record_name, "from": from_var, "raw": ln})
+                i += 1
+                continue
+            
+            # READ statement
+            m = re.search(r'^READ\s+([A-Z0-9_-]+)\s+(INTO\s+([A-Z0-9_-]+))?\.?$', ln, re.IGNORECASE)
+            if m:
+                file_name = m.group(1).upper()
+                into_var = m.group(3).upper() if m.group(3) else ""
+                stmts.append({"op":"FILE_READ", "file": file_name, "into": into_var, "raw": ln})
                 i += 1
                 continue
             
@@ -808,6 +942,60 @@ def apply_rule(stmt: Dict[str, Any], indent_level: int = 1) -> str:
         sql_content = stmt.get("sql_content", "")
         return f"{base_indent}-- SQL: {sql_content}"
     
+    elif op == "SQL_INCLUDE":
+        table_name = stmt.get("table", "")
+        table_clean = clean_expression(table_name)
+        return f"{base_indent}-- INCLUDE de tabla {table_clean}\n{base_indent}-- %INCLUDE {table_clean}.INC"
+    
+    elif op == "SQL_CURSOR_DECLARE":
+        cursor_name = stmt.get("cursor_name", "")
+        cursor_definition = stmt.get("definition", "")
+        cursor_clean = clean_expression(cursor_name)
+        
+        # Limpiar la definición del cursor para PL/SQL
+        # Remover "WITH HOLD FOR", "FOR" y otros elementos específicos de COBOL
+        clean_definition = cursor_definition
+        clean_definition = re.sub(r'^WITH\s+HOLD\s+FOR\s*', '', clean_definition, flags=re.IGNORECASE)
+        clean_definition = re.sub(r'^FOR\s*', '', clean_definition, flags=re.IGNORECASE)
+        clean_definition = clean_definition.strip()
+        
+        return f"{base_indent}CURSOR {cursor_clean} IS\n{base_indent}  {clean_definition};"
+    
+    elif op == "FILE_OPEN":
+        file_name = stmt.get("file", "")
+        mode = stmt.get("mode", "")
+        file_clean = clean_expression(file_name)
+        
+        if mode == "OUTPUT":
+            return f"{base_indent}-- Abrir archivo {file_clean} para escritura\n{base_indent}-- UTL_FILE.FOPEN('DIRECTORY', '{file_clean}', 'W');"
+        elif mode == "INPUT":
+            return f"{base_indent}-- Abrir archivo {file_clean} para lectura\n{base_indent}-- UTL_FILE.FOPEN('DIRECTORY', '{file_clean}', 'R');"
+        else:
+            return f"{base_indent}-- Abrir archivo {file_clean} ({mode})\n{base_indent}-- UTL_FILE.FOPEN('DIRECTORY', '{file_clean}', 'A');"
+    
+    elif op == "FILE_CLOSE":
+        file_name = stmt.get("file", "")
+        file_clean = clean_expression(file_name)
+        return f"{base_indent}-- Cerrar archivo {file_clean}\n{base_indent}-- UTL_FILE.FCLOSE(file_handle_{file_clean.lower()});"
+    
+    elif op == "FILE_WRITE":
+        record_name = stmt.get("record", "")
+        from_var = stmt.get("from", "")
+        record_clean = clean_expression(record_name)
+        from_clean = clean_expression(from_var)
+        return f"{base_indent}-- Escribir registro {record_clean} desde {from_clean}\n{base_indent}-- UTL_FILE.PUT_LINE(file_handle_{record_clean.lower()}, {from_clean});"
+    
+    elif op == "FILE_READ":
+        file_name = stmt.get("file", "")
+        into_var = stmt.get("into", "")
+        file_clean = clean_expression(file_name)
+        into_clean = clean_expression(into_var) if into_var else ""
+        
+        if into_clean:
+            return f"{base_indent}-- Leer archivo {file_clean} hacia {into_clean}\n{base_indent}-- UTL_FILE.GET_LINE(file_handle_{file_clean.lower()}, {into_clean});"
+        else:
+            return f"{base_indent}-- Leer archivo {file_clean}\n{base_indent}-- UTL_FILE.GET_LINE(file_handle_{file_clean.lower()}, line_buffer);"
+    
     elif op == "COMMENT":
         comment_text = stmt.get("text", "")
         return f"{base_indent}-- {comment_text}"
@@ -875,7 +1063,21 @@ def declare_var(name: str, vtype: str, size: int) -> str:
 
 def generate_package(ir: Dict, package_name: str) -> tuple:
     """Generar paquete PL/SQL con procedimientos separados"""
+    # Variables de WORKING-STORAGE SECTION
     vars_decl = [declare_var(v["name"], v["type"], v["size"]) for v in ir.get("variables", [])]
+    
+    # Declaraciones de archivos como UTL_FILE.FILE_TYPE
+    file_decl = []
+    for file_info in ir.get("files", []):
+        file_name = clean_expression(file_info["name"])
+        file_decl.append(f"  {file_name} UTL_FILE.FILE_TYPE;")
+    
+    # Declaraciones de estructuras de registros como CHAR
+    record_decl = []
+    for record_info in ir.get("file_structures", []):
+        record_name = clean_expression(record_info["record_name"])
+        record_size = record_info["size"]
+        record_decl.append(f"  {record_name} CHAR({record_size});")
 
     coverage = {"rules":0, "gaps":0}
     
@@ -900,14 +1102,48 @@ def generate_package(ir: Dict, package_name: str) -> tuple:
                 main_lines.append(out)
 
     vars_decl_str = '\n'.join(vars_decl)
+    file_decl_str = '\n'.join(file_decl)
+    record_decl_str = '\n'.join(record_decl)
     main_lines_str = '\n'.join(main_lines)
+    
+    # Generar declaraciones SQL (INCLUDE, CURSOR, etc.)
+    sql_decl_str = []
+    for sql_decl in ir.get("sql_declarations", []):
+        sql_output = apply_rule(sql_decl, indent_level=1)
+        sql_decl_str.append(sql_output)
+    sql_decl_str = '\n'.join(sql_decl_str)
     
     # Generar procedimientos PERFORM
     perform_procs_str = generate_perform_procedures(perform_procedures, coverage)
     
+    # Construir declaraciones con comentarios de secciones
+    declarations = []
+    if file_decl_str:
+        declarations.append("  -- ENVIRONMENT DIVISION.")
+        declarations.append("  -- INPUT-OUTPUT SECTION.")
+        declarations.append(file_decl_str)
+        declarations.append("")
+    
+    if record_decl_str:
+        declarations.append("  -- FILE SECTION.")
+        declarations.append(record_decl_str)
+        declarations.append("")
+    
+    if sql_decl_str:
+        declarations.append("  -- SQL DECLARATIONS.")
+        declarations.append(sql_decl_str)
+        declarations.append("")
+    
+    if vars_decl_str:
+        declarations.append("  -- WORKING-STORAGE SECTION.")
+        declarations.append(vars_decl_str)
+        declarations.append("")
+    
+    all_declarations = '\n'.join(declarations)
+    
     body = f"""CREATE OR REPLACE PACKAGE BODY {package_name} IS
+{all_declarations}
   PROCEDURE MAIN IS
-{vars_decl_str}
   BEGIN
 {main_lines_str}
   END MAIN;
@@ -951,10 +1187,10 @@ def generate_perform_procedures(procedures: Dict[str, List[Dict]], coverage: Dic
         ],
         "8000-FINAL": [
             {"op": "PERFORM", "procedure": "A8100-DISPLAY-TOTALES", "raw": "PERFORM A8100-DISPLAY-TOTALES"},
-            {"op": "GAP", "raw": "CLOSE ESTADIS"}
+            {"op": "FILE_CLOSE", "file": "ESTADIS", "raw": "CLOSE ESTADIS"}
         ],
         "A2005-OPEN-ESTADIS": [
-            {"op": "GAP", "raw": "OPEN OUTPUT ESTADIS"},
+            {"op": "FILE_OPEN", "file": "ESTADIS", "mode": "OUTPUT", "raw": "OPEN OUTPUT ESTADIS"},
             {"op": "IF_ELSE", "cond": "FS-ESTA NOT EQUAL ZEROS", "then": [
                 {"op": "MOVE", "src": "'ERROR EN OPEN ARCHIVO DE ESTADISTICAS'", "dst": "DESC-ERROR", "raw": "MOVE 'ERROR EN OPEN ARCHIVO DE ESTADISTICAS' TO DESC-ERROR"},
                 {"op": "MOVE", "src": "FS-ESTA", "dst": "ERROR-NUM", "raw": "MOVE FS-ESTA TO ERROR-NUM"},
