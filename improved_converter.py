@@ -1084,22 +1084,17 @@ def generate_package(ir: Dict, package_name: str) -> tuple:
     # Extraer procedimientos PERFORM del IR
     perform_procedures = extract_perform_procedures(ir)
     
-    # Generar procedimiento MAIN - solo llamadas a PERFORM
+    # Generar procedimiento MAIN - incluir todas las sentencias
     main_lines = []
     for proc in ir.get("procedures", []):
         for s in proc.get("statements", []):
-            # Solo incluir PERFORM en el MAIN, no el contenido de los procedimientos
-            if s.get("op") == "PERFORM":
-                out = apply_rule(s)
-                if out.startswith("    -- GAP"):
-                    coverage["gaps"] += 1
-                else:
-                    coverage["rules"] += 1
-                main_lines.append(out)
-            elif s.get("op") == "COMMENT":
-                # Incluir comentarios en el MAIN
-                out = apply_rule(s)
-                main_lines.append(out)
+            # Incluir todas las sentencias en el MAIN
+            out = apply_rule(s)
+            if out.startswith("    -- GAP"):
+                coverage["gaps"] += 1
+            else:
+                coverage["rules"] += 1
+            main_lines.append(out)
 
     vars_decl_str = '\n'.join(vars_decl)
     file_decl_str = '\n'.join(file_decl)

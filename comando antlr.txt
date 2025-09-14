@@ -5,3 +5,11 @@ java -jar C:\antlr\antlr-4.13.1-complete.jar -Dlanguage=Python3 Cobol85.g4
 
 python improved_converter.py samples/P2_IF2.cob
 python improved_converter.py samples/CTB1.COB
+
+python advanced_converter.py samples/C1040.cob
+
+
+python enhanced_converter.py samples/C1040.cob
+
+
+https://www.youtube.com/watch?v=1B9FqM5bgq4

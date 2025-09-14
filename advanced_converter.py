@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Convertidor Mejorado COBOL a PL/SQL
-Versión mejorada basada en el análisis del programa C1040.cob
+Convertidor Avanzado COBOL a PL/SQL
+Basado en el análisis del programa C1040.cob y su migración manual
 """
 
 import re
@@ -10,7 +10,7 @@ import os
 import sys
 from typing import Dict, List, Any, Optional, Tuple
 
-class EnhancedCobolConverter:
+class AdvancedCobolConverter:
     def __init__(self):
         self.program_name = ""
         self.variables = []
@@ -18,6 +18,12 @@ class EnhancedCobolConverter:
         self.file_structures = []
         self.sql_declarations = []
         self.procedures = []
+        self.cursors = []
+        self.services = []
+        self.macros = []
+        self.conditions = []
+        self.literals = []
+        self.structures = []
         
     def clean_expression(self, expr: str) -> str:
         """Limpia expresiones COBOL para PL/SQL"""
@@ -31,9 +37,9 @@ class EnhancedCobolConverter:
         expr = re.sub(r'\s+', ' ', expr.strip())
         
         return expr
-
+    
     def parse_cobol_to_ir(self, cobol_content: str) -> Dict[str, Any]:
-        """Parsea COBOL a representación intermedia mejorada"""
+        """Parsea COBOL a representación intermedia avanzada"""
         lines = cobol_content.split('\n')
         
         # Extraer nombre del programa
@@ -46,6 +52,12 @@ class EnhancedCobolConverter:
         self._parse_data_division(cobol_content)
         self._parse_procedure_division(cobol_content)
         self._parse_sql_declarations(cobol_content)
+        self._parse_cursors(cobol_content)
+        self._parse_services(cobol_content)
+        self._parse_macros(cobol_content)
+        self._parse_conditions(cobol_content)
+        self._parse_literals(cobol_content)
+        self._parse_structures(cobol_content)
         
         return {
             "program": self.program_name,
@@ -53,7 +65,13 @@ class EnhancedCobolConverter:
             "files": self.files,
             "file_structures": self.file_structures,
             "sql_declarations": self.sql_declarations,
-            "procedures": self.procedures
+            "procedures": self.procedures,
+            "cursors": self.cursors,
+            "services": self.services,
+            "macros": self.macros,
+            "conditions": self.conditions,
+            "literals": self.literals,
+            "structures": self.structures
         }
     
     def _parse_environment_division(self, content: str):
@@ -124,44 +142,56 @@ class EnhancedCobolConverter:
             self._parse_working_storage(working_storage_content)
     
     def _parse_working_storage(self, content: str):
-        """Parsea WORKING-STORAGE SECTION mejorado"""
+        """Parsea WORKING-STORAGE SECTION"""
         lines = content.split('\n')
+        current_group = None
         
         for line in lines:
             line = line.strip()
             if not line or line.startswith('*'):
                 continue
             
-            # Parsear variables con nombres completos incluyendo VALUE
-            # Improved approach: split by VALUE first, then parse PIC
-            if 'PIC' in line.upper():
-                # Split the line at VALUE to separate PIC and VALUE clauses
-                if 'VALUE' in line.upper():
-                    parts = re.split(r'\s+VALUE\s+', line, flags=re.IGNORECASE)
-                    pic_part = parts[0]
-                    value_clause = parts[1].rstrip('.').strip() if len(parts) > 1 else None
-                else:
-                    pic_part = line.rstrip('.')
-                    value_clause = None
+            # Parsear variables
+            var_match = re.match(r'(\d+)\s+(\w+).*?PIC\s+([^\.]+)', line, re.IGNORECASE)
+            if var_match:
+                level = var_match.group(1)
+                name = var_match.group(2)
+                pic_clause = var_match.group(3).strip()
                 
-                # Parse the PIC part
-                var_match = re.match(r'(\d+)\s+([A-Z0-9-]+).*?PIC\s+(.+)', pic_part, re.IGNORECASE)
-                if var_match:
-                    level = var_match.group(1)
-                    name = var_match.group(2)
-                    pic_clause = var_match.group(3).strip()
-                    
-                    # Determinar tipo y tamaño
-                    var_type, size = self._parse_pic_clause(pic_clause)
-                    
-                    self.variables.append({
-                        "level": level,
-                        "name": name,
-                        "type": var_type,
-                        "size": size,
-                        "pic_clause": pic_clause,
-                        "value": value_clause
-                    })
+                # Determinar tipo y tamaño
+                var_type, size = self._parse_pic_clause(pic_clause)
+                
+                self.variables.append({
+                    "level": level,
+                    "name": name,
+                    "type": var_type,
+                    "size": size,
+                    "pic_clause": pic_clause
+                })
+            
+            # Parsear condiciones 88
+            condition_match = re.match(r'88\s+(\w+).*?VALUE\s+([^\.]+)', line, re.IGNORECASE)
+            if condition_match:
+                condition_name = condition_match.group(1)
+                condition_value = condition_match.group(2).strip()
+                
+                self.conditions.append({
+                    "name": condition_name,
+                    "value": condition_value
+                })
+            
+            # Parsear literales
+            literal_match = re.match(r'(\d+)\s+(\w+).*?VALUE\s+([^\.]+)', line, re.IGNORECASE)
+            if literal_match:
+                level = literal_match.group(1)
+                name = literal_match.group(2)
+                value = literal_match.group(3).strip()
+                
+                self.literals.append({
+                    "level": level,
+                    "name": name,
+                    "value": value
+                })
     
     def _parse_pic_clause(self, pic_clause: str) -> Tuple[str, int]:
         """Parsea cláusula PIC para determinar tipo y tamaño"""
@@ -216,16 +246,14 @@ class EnhancedCobolConverter:
         lines = content.split('\n')
         current_procedure = None
         current_statements = []
-        i = 0
         
-        while i < len(lines):
-            line = lines[i].strip()
+        for line in lines:
+            line = line.strip()
             if not line or line.startswith('*'):
-                i += 1
                 continue
             
-            # Identificar inicio de procedimiento (solo números seguidos de guiones y letras)
-            proc_match = re.match(r'(\d+-\w+(?:-\w+)*)\.?$', line, re.IGNORECASE)
+            # Identificar inicio de procedimiento
+            proc_match = re.match(r'(\w+-\w+)\.', line)
             if proc_match:
                 # Guardar procedimiento anterior
                 if current_procedure:
@@ -237,33 +265,13 @@ class EnhancedCobolConverter:
                 # Iniciar nuevo procedimiento
                 current_procedure = proc_match.group(1)
                 current_statements = []
-                i += 1
                 continue
             
             # Parsear sentencias
             if current_procedure:
-                # Verificar si es una sentencia multi-línea (FETCH con INTO o SELECT con INTO)
-                if re.match(r'(FETCH|SELECT)\s+[A-Z0-9_-]+', line, re.IGNORECASE):
-                    # Buscar líneas continuas que contengan INTO o FROM
-                    full_statement = line
-                    j = i + 1
-                    while j < len(lines) and not lines[j].strip().startswith('END-EXEC'):
-                        next_line = lines[j].strip()
-                        if next_line and not next_line.startswith('*'):
-                            full_statement += " " + next_line
-                        j += 1
-                    
-                    statement = self._parse_statement(full_statement)
-                    if statement:
-                        current_statements.append(statement)
-                    i = j
-                else:
-                    statement = self._parse_statement(line)
-                    if statement:
-                        current_statements.append(statement)
-                    i += 1
-            else:
-                i += 1
+                statement = self._parse_statement(line)
+                if statement:
+                    current_statements.append(statement)
         
         # Guardar último procedimiento
         if current_procedure:
@@ -275,22 +283,6 @@ class EnhancedCobolConverter:
     def _parse_statement(self, line: str) -> Optional[Dict[str, Any]]:
         """Parsea una sentencia COBOL"""
         line = line.strip()
-        
-        # Palabras clave de cierre COBOL - ignorar
-        if re.match(r'^(END-EXEC|END-IF|END-EVALUATE|END-PERFORM|END-READ|END-WRITE|END-STRING|END-UNSTRING)\.?$', line, re.IGNORECASE):
-            return None
-        
-        # MACROS COBOL (líneas que inician con @)
-        macro_match = re.match(r'@(\w+)(?:\(([^)]*)\))?', line, re.IGNORECASE)
-        if macro_match:
-            macro_name = macro_match.group(1)
-            macro_params = macro_match.group(2) if macro_match.group(2) else ""
-            return {
-                "op": "MACRO",
-                "macro_name": macro_name,
-                "params": macro_params,
-                "raw": line
-            }
         
         # PERFORM
         perform_match = re.match(r'PERFORM\s+(\w+-\w+)\.?', line, re.IGNORECASE)
@@ -334,12 +326,70 @@ class EnhancedCobolConverter:
                 "message": display_match.group(1).strip()
             }
         
+        # STRING
+        string_match = re.match(r'STRING\s+(.+)', line, re.IGNORECASE)
+        if string_match:
+            return {
+                "op": "STRING",
+                "expression": string_match.group(1).strip()
+            }
+        
+        # EVALUATE
+        evaluate_match = re.match(r'EVALUATE\s+(.+)', line, re.IGNORECASE)
+        if evaluate_match:
+            return {
+                "op": "EVALUATE",
+                "expression": evaluate_match.group(1).strip()
+            }
+        
+        # OPEN
+        open_match = re.match(r'OPEN\s+(INPUT|OUTPUT)\s+(\w+)', line, re.IGNORECASE)
+        if open_match:
+            return {
+                "op": "OPEN",
+                "mode": open_match.group(1).upper(),
+                "file": open_match.group(2)
+            }
+        
+        # CLOSE
+        close_match = re.match(r'CLOSE\s+(\w+)', line, re.IGNORECASE)
+        if close_match:
+            return {
+                "op": "CLOSE",
+                "file": close_match.group(1)
+            }
+        
+        # READ
+        read_match = re.match(r'READ\s+(\w+).*?AT\s+END', line, re.IGNORECASE)
+        if read_match:
+            return {
+                "op": "READ",
+                "file": read_match.group(1)
+            }
+        
+        # WRITE
+        write_match = re.match(r'WRITE\s+(\w+)', line, re.IGNORECASE)
+        if write_match:
+            return {
+                "op": "WRITE",
+                "file": write_match.group(1)
+            }
+        
         # INITIALIZE
         initialize_match = re.match(r'INITIALIZE\s+(.+)', line, re.IGNORECASE)
         if initialize_match:
             return {
                 "op": "INITIALIZE",
                 "target": initialize_match.group(1).strip()
+            }
+        
+        # ADD
+        add_match = re.match(r'ADD\s+(\d+)\s+TO\s+(.+)', line, re.IGNORECASE)
+        if add_match:
+            return {
+                "op": "ADD",
+                "value": add_match.group(1),
+                "to": add_match.group(2).strip()
             }
         
         # COMMIT
@@ -349,77 +399,6 @@ class EnhancedCobolConverter:
         # ROLLBACK
         if re.match(r'ROLLBACK', line, re.IGNORECASE):
             return {"op": "ROLLBACK"}
-        
-        # EXEC SQL blocks
-        if re.match(r'EXEC\s+SQL', line, re.IGNORECASE):
-            return {
-                "op": "SQL_BLOCK_START",
-                "raw": line
-            }
-        
-        # OPEN CURSOR
-        open_cursor_match = re.match(r'OPEN\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
-        if open_cursor_match:
-            return {
-                "op": "SQL_OPEN_CURSOR",
-                "cursor_name": open_cursor_match.group(1)
-            }
-        
-        # CLOSE CURSOR
-        close_cursor_match = re.match(r'CLOSE\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
-        if close_cursor_match:
-            return {
-                "op": "SQL_CLOSE_CURSOR",
-                "cursor_name": close_cursor_match.group(1)
-            }
-        
-        # FETCH CURSOR
-        fetch_cursor_match = re.match(r'FETCH\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
-        if fetch_cursor_match:
-            return {
-                "op": "SQL_FETCH_CURSOR",
-                "cursor_name": fetch_cursor_match.group(1),
-                "raw": line
-            }
-        
-        # SELECT INTO (single row) - handle multi-line statements
-        if re.match(r'SELECT\s+', line, re.IGNORECASE) and 'INTO' in line.upper():
-            # Extract the complete SELECT statement
-            select_match = re.search(r'SELECT\s+(.+?)\s+INTO\s+(.+)', line, re.IGNORECASE | re.DOTALL)
-            if select_match:
-                select_clause = select_match.group(1).strip()
-                into_clause = select_match.group(2).strip()
-                
-                # Clean up the SELECT clause (remove FROM and WHERE parts)
-                from_match = re.search(r'(.+?)\s+FROM\s+(.+)', select_clause, re.IGNORECASE)
-                if from_match:
-                    select_fields = from_match.group(1).strip()
-                    from_clause = from_match.group(2).strip()
-                    
-                    # Extract WHERE clause if present
-                    where_match = re.search(r'(.+?)\s+WHERE\s+(.+)', from_clause, re.IGNORECASE)
-                    if where_match:
-                        from_table = where_match.group(1).strip()
-                        where_clause = where_match.group(2).strip()
-                    else:
-                        from_table = from_clause
-                        where_clause = ""
-                    
-                    return {
-                        "op": "SQL_SELECT_INTO",
-                        "select_fields": select_fields,
-                        "from_table": from_table,
-                        "where_clause": where_clause,
-                        "into_clause": into_clause,
-                        "raw": line
-                    }
-                else:
-                    return {
-                        "op": "SQL_SELECT_INTO",
-                        "select_clause": select_clause,
-                        "into_clause": into_clause,
-                        "raw": line
-                    }
         
         # GAP - sentencia no reconocida
         return {
@@ -445,7 +424,7 @@ class EnhancedCobolConverter:
                 })
             
             # DECLARE CURSOR
-            cursor_match = re.search(r'DECLARE\s+([A-Z0-9_-]+)\s+CURSOR.*?FOR\s+(.*)', block, re.IGNORECASE | re.DOTALL)
+            cursor_match = re.search(r'DECLARE\s+(\w+)\s+CURSOR.*?FOR\s+(.*)', block, re.IGNORECASE | re.DOTALL)
             if cursor_match:
                 cursor_name = cursor_match.group(1)
                 cursor_definition = cursor_match.group(2).strip()
@@ -457,10 +436,100 @@ class EnhancedCobolConverter:
                     "raw": f"EXEC SQL {block} END-EXEC."
                 })
     
+    def _parse_cursors(self, content: str):
+        """Parsea cursores SQL"""
+        # OPEN CURSOR
+        open_cursor_pattern = r'OPEN\s+(\w+)'
+        for match in re.finditer(open_cursor_pattern, content, re.IGNORECASE):
+            cursor_name = match.group(1)
+            self.cursors.append({
+                "op": "OPEN_CURSOR",
+                "cursor_name": cursor_name
+            })
+        
+        # FETCH CURSOR
+        fetch_cursor_pattern = r'FETCH\s+(\w+)\s+INTO\s+(.+)'
+        for match in re.finditer(fetch_cursor_pattern, content, re.IGNORECASE):
+            cursor_name = match.group(1)
+            into_clause = match.group(2)
+            self.cursors.append({
+                "op": "FETCH_CURSOR",
+                "cursor_name": cursor_name,
+                "into_clause": into_clause
+            })
+        
+        # CLOSE CURSOR
+        close_cursor_pattern = r'CLOSE\s+(\w+)'
+        for match in re.finditer(close_cursor_pattern, content, re.IGNORECASE):
+            cursor_name = match.group(1)
+            self.cursors.append({
+                "op": "CLOSE_CURSOR",
+                "cursor_name": cursor_name
+            })
+    
+    def _parse_services(self, content: str):
+        """Parsea llamadas a servicios"""
+        # @INVOCAR
+        invocar_pattern = r'@INVOCAR\((\w+),(\w+)\)'
+        for match in re.finditer(invocar_pattern, content, re.IGNORECASE):
+            service_name = match.group(1)
+            service_type = match.group(2)
+            self.services.append({
+                "op": "INVOCAR",
+                "service_name": service_name,
+                "service_type": service_type
+            })
+        
+        # PRC_SRV_*
+        prc_pattern = r'PRC_SRV_(\w+)'
+        for match in re.finditer(prc_pattern, content, re.IGNORECASE):
+            service_name = match.group(1)
+            self.services.append({
+                "op": "PRC_SRV",
+                "service_name": service_name
+            })
+    
+    def _parse_macros(self, content: str):
+        """Parsea macros COBOL"""
+        macro_pattern = r'@(\w+)\(([^)]*)\)'
+        for match in re.finditer(macro_pattern, content, re.IGNORECASE):
+            macro_name = match.group(1)
+            macro_params = match.group(2) if match.group(2) else ""
+            self.macros.append({
+                "op": "MACRO",
+                "macro_name": macro_name,
+                "params": macro_params
+            })
+    
+    def _parse_conditions(self, content: str):
+        """Parsea condiciones 88"""
+        # Ya se parsean en _parse_working_storage
+        pass
+    
+    def _parse_literals(self, content: str):
+        """Parsea literales"""
+        # Ya se parsean en _parse_working_storage
+        pass
+    
+    def _parse_structures(self, content: str):
+        """Parsea estructuras complejas"""
+        # REDEFINES
+        redefines_pattern = r'(\d+)\s+(\w+)\s+REDEFINES\s+(\w+)'
+        for match in re.finditer(redefines_pattern, content, re.IGNORECASE):
+            level = match.group(1)
+            name = match.group(2)
+            redefines = match.group(3)
+            self.structures.append({
+                "op": "REDEFINES",
+                "level": level,
+                "name": name,
+                "redefines": redefines
+            })
+    
     def apply_rule(self, stmt: Dict[str, Any], base_indent: str = "    ") -> str:
         """Aplica reglas de conversión a sentencias"""
         op = stmt.get("op", "UNKNOWN")
-    
+        
         if op == "PERFORM":
             target = stmt.get("target", "")
             target_clean = self.clean_expression(target)
@@ -490,6 +559,35 @@ class EnhancedCobolConverter:
             message_clean = self.clean_expression(message)
             return f"{base_indent}DBMS_OUTPUT.PUT_LINE({message_clean});"
         
+        elif op == "STRING":
+            expression = stmt.get("expression", "")
+            return f"{base_indent}-- STRING: {expression}"
+        
+        elif op == "EVALUATE":
+            expression = stmt.get("expression", "")
+            return f"{base_indent}-- EVALUATE: {expression}"
+        
+        elif op == "OPEN":
+            mode = stmt.get("mode", "")
+            file_name = stmt.get("file", "")
+            file_clean = self.clean_expression(file_name)
+            return f"{base_indent}-- OPEN {mode} {file_clean}"
+        
+        elif op == "CLOSE":
+            file_name = stmt.get("file", "")
+            file_clean = self.clean_expression(file_name)
+            return f"{base_indent}-- CLOSE {file_clean}"
+        
+        elif op == "READ":
+            file_name = stmt.get("file", "")
+            file_clean = self.clean_expression(file_name)
+            return f"{base_indent}-- READ {file_clean}"
+        
+        elif op == "WRITE":
+            file_name = stmt.get("file", "")
+            file_clean = self.clean_expression(file_name)
+            return f"{base_indent}-- WRITE {file_clean}"
+        
         elif op == "INITIALIZE":
             target = stmt.get("target", "")
             target_clean = self.clean_expression(target)
@@ -497,6 +595,12 @@ class EnhancedCobolConverter:
                 return f"{base_indent}RETURN_CODE := 0;"
             else:
                 return f"{base_indent}{target_clean} := NULL;"
+        
+        elif op == "ADD":
+            value = stmt.get("value", "")
+            to_val = stmt.get("to", "")
+            to_clean = self.clean_expression(to_val)
+            return f"{base_indent}{to_clean} := {to_clean} + {value};"
         
         elif op == "COMMIT":
             return f"{base_indent}COMMIT;"
@@ -512,8 +616,7 @@ class EnhancedCobolConverter:
         elif op == "SQL_CURSOR_DECLARE":
             cursor_name = stmt.get("cursor_name", "")
             cursor_definition = stmt.get("definition", "")
-            # Preserve cursor names with hyphens by replacing with underscores
-            cursor_clean = cursor_name.replace('-', '_')
+            cursor_clean = self.clean_expression(cursor_name)
             
             # Limpiar la definición del cursor para PL/SQL
             clean_definition = cursor_definition
@@ -522,79 +625,6 @@ class EnhancedCobolConverter:
             clean_definition = clean_definition.strip()
             
             return f"{base_indent}CURSOR {cursor_clean} IS\n{base_indent}  {clean_definition};"
-        
-        elif op == "MACRO":
-            macro_name = stmt.get("macro_name", "")
-            macro_params = stmt.get("params", "")
-            raw = stmt.get("raw", "")
-            
-            # Convertir macro a comentario PL/SQL
-            if macro_params:
-                return f"{base_indent}-- MACRO COBOL: {macro_name}({macro_params})"
-            else:
-                return f"{base_indent}-- MACRO COBOL: {macro_name}"
-        
-        elif op == "SQL_OPEN_CURSOR":
-            cursor_name = stmt.get("cursor_name", "")
-            # Preserve cursor names with hyphens by replacing with underscores
-            cursor_clean = cursor_name.replace('-', '_')
-            return f"{base_indent}OPEN {cursor_clean};"
-        
-        elif op == "SQL_CLOSE_CURSOR":
-            cursor_name = stmt.get("cursor_name", "")
-            # Preserve cursor names with hyphens by replacing with underscores
-            cursor_clean = cursor_name.replace('-', '_')
-            return f"{base_indent}CLOSE {cursor_clean};"
-        
-        elif op == "SQL_FETCH_CURSOR":
-            cursor_name = stmt.get("cursor_name", "")
-            raw = stmt.get("raw", "")
-            # Preserve cursor names with hyphens by replacing with underscores
-            cursor_clean = cursor_name.replace('-', '_')
-            
-            # Extraer la cláusula INTO del FETCH
-            into_match = re.search(r'INTO\s+(.+)', raw, re.IGNORECASE)
-            if into_match:
-                into_clause = into_match.group(1).strip()
-                # Limpiar las variables de host (remover :)
-                into_clean = re.sub(r':(\w+)', r'\1', into_clause)
-                into_clean = self.clean_expression(into_clean)
-                return f"{base_indent}FETCH {cursor_clean} INTO {into_clean};"
-            else:
-                return f"{base_indent}FETCH {cursor_clean};"
-        
-        elif op == "SQL_SELECT_INTO":
-            # Handle enhanced SELECT INTO with separate components
-            if "select_fields" in stmt:
-                select_fields = stmt.get("select_fields", "")
-                from_table = stmt.get("from_table", "")
-                where_clause = stmt.get("where_clause", "")
-                into_clause = stmt.get("into_clause", "")
-                
-                select_clean = self.clean_expression(select_fields)
-                from_clean = self.clean_expression(from_table)
-                into_clean = self.clean_expression(into_clause)
-                # Limpiar las variables de host (remover :)
-                into_clean = re.sub(r':(\w+)', r'\1', into_clean)
-                
-                if where_clause:
-                    where_clean = self.clean_expression(where_clause)
-                    where_clean = re.sub(r':(\w+)', r'\1', where_clean)
-                    return f"{base_indent}SELECT {select_clean} FROM {from_clean} WHERE {where_clean} INTO {into_clean};"
-                else:
-                    return f"{base_indent}SELECT {select_clean} FROM {from_clean} INTO {into_clean};"
-            else:
-                # Fallback to original format
-                select_clause = stmt.get("select_clause", "")
-                into_clause = stmt.get("into_clause", "")
-                select_clean = self.clean_expression(select_clause)
-                into_clean = self.clean_expression(into_clause)
-                # Limpiar las variables de host (remover :)
-                into_clean = re.sub(r':(\w+)', r'\1', into_clean)
-                return f"{base_indent}SELECT {select_clean} INTO {into_clean};"
-        
-        elif op == "SQL_BLOCK_START":
-            return f"{base_indent}-- SQL Block Start"
         
         else:
             # GAP - sentencia no reconocida
@@ -612,20 +642,13 @@ class EnhancedCobolConverter:
             name = self.clean_expression(var.get("name", ""))
             var_type = var.get("type", "STRING")
             size = var.get("size", 1)
-            value = var.get("value")
             
             if var_type == "STRING":
                 plsql_type = f"VARCHAR2({size})"
             else:
                 plsql_type = f"NUMBER({size})"
             
-            # Incluir inicialización si hay VALUE
-            if value:
-                # Limpiar el valor (remover comillas si las tiene)
-                clean_value = value.strip().strip("'\"")
-                var_declarations.append(f"  {name} {plsql_type} := '{clean_value}';")
-            else:
-                var_declarations.append(f"  {name} {plsql_type};")
+            var_declarations.append(f"  {name} {plsql_type};")
         
         # Generar declaraciones de archivos
         file_declarations = []
@@ -646,8 +669,21 @@ class EnhancedCobolConverter:
         # Generar declaraciones SQL
         sql_declarations = []
         for sql_decl in ir.get("sql_declarations", []):
-            result = self.apply_rule(sql_decl, "  ")
-            sql_declarations.append(result)
+            sql_declarations.append(self.apply_rule(sql_decl, "  "))
+        
+        # Generar cursores
+        cursor_declarations = []
+        for cursor in ir.get("cursors", []):
+            if cursor.get("op") == "OPEN_CURSOR":
+                cursor_name = self.clean_expression(cursor.get("cursor_name", ""))
+                cursor_declarations.append(f"  -- OPEN {cursor_name}")
+            elif cursor.get("op") == "FETCH_CURSOR":
+                cursor_name = self.clean_expression(cursor.get("cursor_name", ""))
+                into_clause = cursor.get("into_clause", "")
+                cursor_declarations.append(f"  -- FETCH {cursor_name} INTO {into_clause}")
+            elif cursor.get("op") == "CLOSE_CURSOR":
+                cursor_name = self.clean_expression(cursor.get("cursor_name", ""))
+                cursor_declarations.append(f"  -- CLOSE {cursor_name}")
         
         # Generar procedimientos
         procedure_declarations = []
@@ -673,6 +709,9 @@ class EnhancedCobolConverter:
 
   -- SQL DECLARATIONS.
 {chr(10).join(sql_declarations)}
+
+  -- CURSOR OPERATIONS.
+{chr(10).join(cursor_declarations)}
 
   -- PROCEDURE DECLARATIONS.
 {chr(10).join(procedure_declarations)}
@@ -732,9 +771,9 @@ END {program_name_clean};
 
 def main():
     if len(sys.argv) != 2:
-        print("Uso: python enhanced_converter.py <archivo_cobol>")
+        print("Uso: python advanced_converter.py <archivo_cobol>")
         sys.exit(1)
-
+    
     cobol_file = sys.argv[1]
     
     if not os.path.exists(cobol_file):
@@ -746,7 +785,7 @@ def main():
         cobol_content = f.read()
     
     # Convertir
-    converter = EnhancedCobolConverter()
+    converter = AdvancedCobolConverter()
     ir = converter.parse_cobol_to_ir(cobol_content)
     
     # Generar archivos de salida
@@ -770,7 +809,7 @@ def main():
             "rules": len([stmt for proc in ir.get("procedures", []) for stmt in proc.get("statements", []) if stmt.get("op") != "UNKNOWN"]),
             "gaps": len([stmt for proc in ir.get("procedures", []) for stmt in proc.get("statements", []) if stmt.get("op") == "UNKNOWN"])
         },
-        "method": "ENHANCED"
+        "method": "ADVANCED"
     }
     
     report_file = f"out/{base_name}_report.json"
@@ -786,3 +825,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

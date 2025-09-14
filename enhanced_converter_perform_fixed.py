@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Convertidor Mejorado COBOL a PL/SQL
-Versión corregida con soporte para VALUE en variables
+Versión corregida con soporte para PERFORM y VALUE
 """
 
 import re
@@ -21,7 +21,7 @@ class EnhancedCobolConverter:
         
     def clean_expression(self, expr: str) -> str:
         """Limpia expresiones COBOL para PL/SQL"""
-    if not expr:
+        if not expr:
             return ""
         
         # Reemplazar guiones con guiones bajos
@@ -29,8 +29,8 @@ class EnhancedCobolConverter:
         
         # Limpiar espacios y caracteres especiales
         expr = re.sub(r'\s+', ' ', expr.strip())
-    
-    return expr
+        
+        return expr
 
     def parse_cobol_to_ir(self, cobol_content: str) -> Dict[str, Any]:
         """Parsea COBOL a representación intermedia mejorada"""
@@ -101,6 +101,7 @@ class EnhancedCobolConverter:
     def _parse_working_storage(self, content: str):
         """Parsea WORKING-STORAGE SECTION mejorado con VALUE"""
         lines = content.split('\n')
+        filler_counter = 1  # Contador para variables FILLER únicas
         
         for line in lines:
             line = line.strip()
@@ -114,6 +115,11 @@ class EnhancedCobolConverter:
                 name = var_match.group(2)
                 pic_clause = var_match.group(3).strip()
                 value_clause = var_match.group(4).strip() if var_match.group(4) else None
+                
+                # Hacer únicas las variables FILLER
+                if name.upper() == 'FILLER':
+                    name = f"FILLER_{filler_counter:03d}"
+                    filler_counter += 1
                 
                 # Determinar tipo y tamaño
                 var_type, size = self._parse_pic_clause(pic_clause)
@@ -275,7 +281,7 @@ class EnhancedCobolConverter:
                 "raw": line
             }
         
-        # PERFORM
+        # PERFORM - Corregido para capturar nombres completos
         perform_match = re.match(r'PERFORM\s+([A-Z0-9]+(?:-[A-Z0-9]+)*)\.?', line, re.IGNORECASE)
         if perform_match:
             return {
@@ -283,7 +289,7 @@ class EnhancedCobolConverter:
                 "target": perform_match.group(1)
             }
         
-        # PERFORM UNTIL
+        # PERFORM UNTIL - Corregido para capturar nombres completos
         perform_until_match = re.match(r'PERFORM\s+([A-Z0-9]+(?:-[A-Z0-9]+)*)\s+UNTIL\s+(.+)', line, re.IGNORECASE)
         if perform_until_match:
             return {
@@ -341,8 +347,9 @@ class EnhancedCobolConverter:
     
     def _parse_sql_declarations(self, content: str):
         """Parsea declaraciones SQL"""
-        # EXEC SQL ... END-EXEC
-        sql_blocks = re.findall(r'EXEC\s+SQL\s+(.*?)END-EXEC\.', content, re.IGNORECASE | re.DOTALL)
+        # Buscar bloques EXEC SQL usando un enfoque más robusto
+        exec_sql_pattern = r'EXEC\s+SQL\s+(.*?)END-EXEC\.'
+        sql_blocks = re.findall(exec_sql_pattern, content, re.IGNORECASE | re.DOTALL)
         
         for sql_block in sql_blocks:
             sql_block = sql_block.strip()
@@ -357,11 +364,17 @@ class EnhancedCobolConverter:
                     "raw": f"EXEC SQL INCLUDE {table_name} END-EXEC."
                 })
             
-            # DECLARE CURSOR
+            # DECLARE CURSOR - buscar en todo el bloque
             cursor_match = re.search(r'DECLARE\s+(\w+)\s+CURSOR\s+(.*)', sql_block, re.IGNORECASE | re.DOTALL)
             if cursor_match:
                 cursor_name = cursor_match.group(1)
                 cursor_definition = cursor_match.group(2).strip()
+                
+                # Limpiar la definición del cursor
+                # Remover WITH HOLD FOR y FOR al final
+                cursor_definition = re.sub(r'\s+WITH\s+HOLD\s+FOR\s*$', '', cursor_definition, flags=re.IGNORECASE)
+                cursor_definition = re.sub(r'\s+FOR\s*$', '', cursor_definition, flags=re.IGNORECASE)
+                
                 self.sql_declarations.append({
                     "op": "SQL_CURSOR_DECLARE",
                     "cursor_name": cursor_name,
@@ -371,9 +384,9 @@ class EnhancedCobolConverter:
     
     def apply_rule(self, stmt: Dict[str, Any], base_indent: str = "    ") -> str:
         """Aplica reglas de conversión a una sentencia"""
-    op = stmt.get("op", "UNKNOWN")
-    
-    if op == "MOVE":
+        op = stmt.get("op", "UNKNOWN")
+        
+        if op == "MOVE":
             from_expr = self.clean_expression(stmt.get("from", ""))
             to_expr = self.clean_expression(stmt.get("to", ""))
             return f"{base_indent}{to_expr} := {from_expr};"
@@ -420,8 +433,17 @@ class EnhancedCobolConverter:
             
             # Limpiar la definición del cursor para PL/SQL
             clean_definition = cursor_definition
-            clean_definition = re.sub(r'^WITH\s+HOLD\s+FOR\s*', '', clean_definition, flags=re.IGNORECASE)
-            clean_definition = re.sub(r'^FOR\s*', '', clean_definition, flags=re.IGNORECASE)
+            
+            # Remover WITH HOLD FOR y FOR al final
+            clean_definition = re.sub(r'\s+WITH\s+HOLD\s+FOR\s*$', '', clean_definition, flags=re.IGNORECASE)
+            clean_definition = re.sub(r'\s+FOR\s*$', '', clean_definition, flags=re.IGNORECASE)
+            
+            # Convertir variables COBOL a PL/SQL (:WS-COD-INCID -> WS_COD_INCID)
+            clean_definition = re.sub(r':([A-Z0-9-]+)', lambda m: self.clean_expression(m.group(1)), clean_definition)
+            
+            # Agregar esquema NEXTI a las tablas (FROM T12INC06 -> FROM NEXTI.T12INC06)
+            clean_definition = re.sub(r'\bFROM\s+([A-Z0-9]+)\b', r'FROM NEXTI.\1', clean_definition, flags=re.IGNORECASE)
+            
             clean_definition = clean_definition.strip()
             
             return f"{base_indent}CURSOR {cursor_clean} IS\n{base_indent}  {clean_definition};"
@@ -457,15 +479,31 @@ class EnhancedCobolConverter:
             
             if var_type == "STRING":
                 plsql_type = f"VARCHAR2({size})"
-    else:
+            else:
                 plsql_type = f"NUMBER({size})"
             
             # Incluir inicialización si hay VALUE
             if value:
                 # Limpiar el valor (remover comillas si las tiene)
                 clean_value = value.strip().strip("'\"")
-                var_declarations.append(f"  {name} {plsql_type} := '{clean_value}';")
-        else:
+                
+                # Convertir valores COBOL a PL/SQL
+                if clean_value.upper() == 'ZEROS':
+                    if var_type == "NUMERIC":
+                        clean_value = "0"
+                    else:
+                        clean_value = "'0'"
+                elif clean_value.upper() == 'SPACES':
+                    clean_value = "''"
+                elif clean_value.upper() == 'SPACE':
+                    clean_value = "' '"
+                else:
+                    # Si es un valor literal, mantenerlo con comillas
+                    if not clean_value.startswith("'") and not clean_value.isdigit():
+                        clean_value = f"'{clean_value}'"
+                
+                var_declarations.append(f"  {name} {plsql_type} := {clean_value};")
+            else:
                 var_declarations.append(f"  {name} {plsql_type};")
         
         # Generar declaraciones de archivos
@@ -490,7 +528,7 @@ class EnhancedCobolConverter:
         main_lines = []
         coverage = {"rules": 0, "gaps": 0}
         
-    for proc in ir.get("procedures", []):
+        for proc in ir.get("procedures", []):
             proc_name = self.clean_expression(proc.get("name", ""))
             procedure_declarations.append(f"  PROCEDURE {proc_name};")
             
@@ -504,9 +542,9 @@ class EnhancedCobolConverter:
                 
                 # Contar reglas y gaps
                 if stmt.get("op") == "UNKNOWN":
-                coverage["gaps"] += 1
-            else:
-                coverage["rules"] += 1
+                    coverage["gaps"] += 1
+                else:
+                    coverage["rules"] += 1
             
             proc_lines.append("  END;")
             main_lines.extend(proc_lines)
@@ -591,7 +629,7 @@ class EnhancedCobolConverter:
 
 def main():
     if len(sys.argv) != 2:
-        print("Uso: python enhanced_converter_fixed.py <archivo_cobol>")
+        print("Uso: python enhanced_converter_perform_fixed.py <archivo_cobol>")
         sys.exit(1)
     
     cobol_file = sys.argv[1]
@@ -638,7 +676,7 @@ def main():
     report = {
         "program": base_name,
         "coverage": coverage,
-        "method": "ENHANCED_FIXED"
+        "method": "ENHANCED_PERFORM_FIXED"
     }
     
     report_file = f"out/{base_name}_report.json"

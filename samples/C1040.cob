@@ -22,7 +22,7 @@
       **         clientes. Al ejecutarse, todos los intercambios    **
       **         que no hayan sido resueltos deben marcarse como    **
       **         devueltos y actualizar el estado de los cheques    **
-      **         a pendiente  de devolucion. Estos  cheques se en-  **
+      **         a pendiente  de devolucion. Estos  cheques se en-  **  
       **         viaran a la camara como devueltos en el proximo en-**
       **         vio.                                               **
       **============================================================**
