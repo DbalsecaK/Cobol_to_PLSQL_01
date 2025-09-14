@@ -9,6 +9,7 @@ import json
 import os
 import sys
 from typing import Dict, List, Any, Optional, Tuple
+from cobol_condition_parser import CobolConditionParser
 
 class EnhancedCobolConverter:
     def __init__(self):
@@ -18,6 +19,9 @@ class EnhancedCobolConverter:
         self.file_structures = []
         self.sql_declarations = []
         self.procedures = []
+        
+        # Parser independiente para condiciones complejas
+        self.condition_parser = CobolConditionParser()
         
         # Configuración de valores especiales COBOL para MOVE statements
         self.special_values = {
@@ -207,6 +211,17 @@ class EnhancedCobolConverter:
                         'raw': line
                     }
         
+        # Check for literal value continuations (like 'F' OR 'G')
+        literal_continuation_pattern = r"^'([^']+)'\s+OR\s+'([^']+)'$"
+        match = re.match(literal_continuation_pattern, line, re.IGNORECASE)
+        if match:
+            return {
+                'op': 'IF_LITERAL_CONTINUATION',
+                'value1': match.group(1),
+                'value2': match.group(2),
+                'raw': line
+            }
+        
         return None
     
     def convert_move_statement_enhanced(self, stmt: Dict[str, Any]) -> str:
@@ -284,6 +299,15 @@ class EnhancedCobolConverter:
         
         # Return the continuation condition with THEN to complete the IF
         return f"{base_indent}{variable_clean} {plsql_operator} {value_clean} THEN"
+    
+    def convert_if_literal_continuation(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert IF literal continuation to PL/SQL"""
+        value1 = stmt.get("value1", "")
+        value2 = stmt.get("value2", "")
+        
+        # For literal continuations, we need to complete the previous IF condition
+        # This should be combined with the previous IF statement
+        return f"{base_indent}T10PSE65.COD_TIPO_SEGURO = '{value1}' OR T10PSE65.COD_TIPO_SEGURO = '{value2}') THEN"
     
     def _apply_indentation(self, text: str, base_indent: str) -> str:
         """Apply proper indentation to multi-line PL/SQL code"""
@@ -835,6 +859,10 @@ class EnhancedCobolConverter:
     def parse_condition(self, condition: str) -> str:
         """Parse COBOL condition to PL/SQL condition"""
         condition = condition.strip()
+        
+        # Check if this is a complex condition that needs special parsing
+        if self.condition_parser.detect_complex_condition(condition):
+            return self.condition_parser.parse_complex_condition(condition)
         
         # Handle NOT conditions
         if condition.upper().startswith('NOT '):
@@ -1651,6 +1679,9 @@ class EnhancedCobolConverter:
         
         elif op == "IF_CONTINUATION":
             return self.convert_if_continuation(stmt, base_indent)
+        
+        elif op == "IF_LITERAL_CONTINUATION":
+            return self.convert_if_literal_continuation(stmt, base_indent)
         
         elif op == "EVALUATE":
             result = self.convert_evaluate_statement_enhanced(stmt)
