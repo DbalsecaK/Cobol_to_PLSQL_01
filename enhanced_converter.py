@@ -407,6 +407,153 @@ class EnhancedCobolConverter:
 {base_indent}        v_file_status := 'ERROR';
 {base_indent}END;"""
     
+    def parse_set_statement_enhanced(self, line: str) -> Optional[Dict[str, Any]]:
+        """Parse SET statement with enhanced support for all SET operations"""
+        # SET condition-name TO TRUE/FALSE
+        set_condition_match = re.match(r'SET\s+([A-Z0-9_-]+)\s+TO\s+(TRUE|FALSE)', line, re.IGNORECASE)
+        if set_condition_match:
+            return {
+                "op": "SET_CONDITION",
+                "condition_name": set_condition_match.group(1),
+                "value": set_condition_match.group(2).upper(),
+                "raw": line
+            }
+        
+        # SET index TO value
+        set_index_to_match = re.match(r'SET\s+([A-Z0-9_-]+)\s+TO\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
+        if set_index_to_match:
+            return {
+                "op": "SET_INDEX_TO",
+                "index_name": set_index_to_match.group(1),
+                "value": set_index_to_match.group(2),
+                "raw": line
+            }
+        
+        # SET index UP BY value
+        set_index_up_match = re.match(r'SET\s+([A-Z0-9_-]+)\s+UP\s+BY\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
+        if set_index_up_match:
+            return {
+                "op": "SET_INDEX_UP",
+                "index_name": set_index_up_match.group(1),
+                "increment": set_index_up_match.group(2),
+                "raw": line
+            }
+        
+        # SET index DOWN BY value
+        set_index_down_match = re.match(r'SET\s+([A-Z0-9_-]+)\s+DOWN\s+BY\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
+        if set_index_down_match:
+            return {
+                "op": "SET_INDEX_DOWN",
+                "index_name": set_index_down_match.group(1),
+                "decrement": set_index_down_match.group(2),
+                "raw": line
+            }
+        
+        # SET variable TO NULL
+        set_null_match = re.match(r'SET\s+([A-Z0-9_-]+)\s+TO\s+NULL', line, re.IGNORECASE)
+        if set_null_match:
+            return {
+                "op": "SET_NULL",
+                "variable_name": set_null_match.group(1),
+                "raw": line
+            }
+        
+        # SET pointer TO ADDRESS OF variable
+        set_pointer_match = re.match(r'SET\s+([A-Z0-9_-]+)\s+TO\s+ADDRESS\s+OF\s+([A-Z0-9_-]+)', line, re.IGNORECASE)
+        if set_pointer_match:
+            return {
+                "op": "SET_POINTER",
+                "pointer_name": set_pointer_match.group(1),
+                "target_variable": set_pointer_match.group(2),
+                "raw": line
+            }
+        
+        # SET variable TO literal value
+        set_literal_match = re.match(r'SET\s+([A-Z0-9_-]+)\s+TO\s+([A-Z0-9\'\"]+)', line, re.IGNORECASE)
+        if set_literal_match:
+            return {
+                "op": "SET_LITERAL",
+                "variable_name": set_literal_match.group(1),
+                "value": set_literal_match.group(2),
+                "raw": line
+            }
+        
+        return None
+    
+    def convert_set_condition(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert SET condition-name TO TRUE/FALSE to PL/SQL"""
+        condition_name = stmt.get("condition_name", "")
+        value = stmt.get("value", "TRUE")
+        condition_clean = self.clean_expression(condition_name)
+        
+        # Convert condition name to a valid PL/SQL variable name
+        # Remove common COBOL prefixes and convert to lowercase
+        var_name = condition_clean.lower()
+        if var_name.startswith('ind-'):
+            var_name = var_name[4:]  # Remove 'ind-' prefix
+        elif var_name.startswith('ws-'):
+            var_name = var_name[3:]  # Remove 'ws-' prefix
+        
+        # Generate actual PL/SQL assignment
+        if value == "TRUE":
+            return f"{base_indent}{var_name} := TRUE; -- SET {condition_clean} TO TRUE"
+        else:
+            return f"{base_indent}{var_name} := FALSE; -- SET {condition_clean} TO FALSE"
+    
+    def convert_set_index_to(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert SET index TO value to PL/SQL"""
+        index_name = stmt.get("index_name", "")
+        value = stmt.get("value", "")
+        index_clean = self.clean_expression(index_name)
+        value_clean = self.clean_expression(value)
+        
+        return f"{base_indent}{index_clean} := {value_clean}; -- SET {index_clean} TO {value_clean}"
+    
+    def convert_set_index_up(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert SET index UP BY value to PL/SQL"""
+        index_name = stmt.get("index_name", "")
+        increment = stmt.get("increment", "1")
+        index_clean = self.clean_expression(index_name)
+        increment_clean = self.clean_expression(increment)
+        
+        return f"{base_indent}{index_clean} := {index_clean} + {increment_clean}; -- SET {index_clean} UP BY {increment_clean}"
+    
+    def convert_set_index_down(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert SET index DOWN BY value to PL/SQL"""
+        index_name = stmt.get("index_name", "")
+        decrement = stmt.get("decrement", "1")
+        index_clean = self.clean_expression(index_name)
+        decrement_clean = self.clean_expression(decrement)
+        
+        return f"{base_indent}{index_clean} := {index_clean} - {decrement_clean}; -- SET {index_clean} DOWN BY {decrement_clean}"
+    
+    def convert_set_null(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert SET variable TO NULL to PL/SQL"""
+        variable_name = stmt.get("variable_name", "")
+        variable_clean = self.clean_expression(variable_name)
+        
+        return f"{base_indent}{variable_clean} := NULL; -- SET {variable_clean} TO NULL"
+    
+    def convert_set_pointer(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert SET pointer TO ADDRESS OF variable to PL/SQL"""
+        pointer_name = stmt.get("pointer_name", "")
+        target_variable = stmt.get("target_variable", "")
+        pointer_clean = self.clean_expression(pointer_name)
+        target_clean = self.clean_expression(target_variable)
+        
+        return f"""{base_indent}-- SET {pointer_clean} TO ADDRESS OF {target_clean}
+{base_indent}-- Note: PL/SQL doesn't have direct pointer equivalents
+{base_indent}-- {pointer_clean} := '{target_clean}'; -- Reference by name"""
+    
+    def convert_set_literal(self, stmt: Dict[str, Any], base_indent: str) -> str:
+        """Convert SET variable TO literal value to PL/SQL"""
+        variable_name = stmt.get("variable_name", "")
+        value = stmt.get("value", "")
+        variable_clean = self.clean_expression(variable_name)
+        value_clean = self.clean_expression(value)
+        
+        return f"{base_indent}{variable_clean} := {value_clean}; -- SET {variable_clean} TO {value_clean}"
+    
     def parse_condition(self, condition: str) -> str:
         """Parse COBOL condition to PL/SQL condition"""
         condition = condition.strip()
@@ -1048,6 +1195,11 @@ class EnhancedCobolConverter:
                 "raw": line
             }
         
+        # SET OPERATIONS - Enhanced parsing
+        set_result = self.parse_set_statement_enhanced(line)
+        if set_result:
+            return set_result
+        
         # EXEC SQL blocks
         if re.match(r'EXEC\s+SQL', line, re.IGNORECASE):
             return {
@@ -1226,6 +1378,27 @@ class EnhancedCobolConverter:
         
         elif op == "WRITE_FILE":
             return self.convert_write_file(stmt, base_indent)
+        
+        elif op == "SET_CONDITION":
+            return self.convert_set_condition(stmt, base_indent)
+        
+        elif op == "SET_INDEX_TO":
+            return self.convert_set_index_to(stmt, base_indent)
+        
+        elif op == "SET_INDEX_UP":
+            return self.convert_set_index_up(stmt, base_indent)
+        
+        elif op == "SET_INDEX_DOWN":
+            return self.convert_set_index_down(stmt, base_indent)
+        
+        elif op == "SET_NULL":
+            return self.convert_set_null(stmt, base_indent)
+        
+        elif op == "SET_POINTER":
+            return self.convert_set_pointer(stmt, base_indent)
+        
+        elif op == "SET_LITERAL":
+            return self.convert_set_literal(stmt, base_indent)
         
         elif op == "SQL_INCLUDE":
             table_name = stmt.get("table", "")
