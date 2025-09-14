@@ -13,6 +13,9 @@ from cobol_condition_parser import CobolConditionParser
 from cobol_flow_control_parser import FlowControlParserFactory
 from cobol_goback_handler import GOBACKHandlerFactory
 from cobol_set_handler import SetHandlerFactory
+from cobol_string_handler import StringHandlerFactory
+from cobol_string_multiline_handler import StringMultilineHandlerFactory
+from cobol_sql_handler import SqlHandlerFactory
 
 class EnhancedCobolConverter:
     def __init__(self):
@@ -37,6 +40,15 @@ class EnhancedCobolConverter:
         
         # Handler para SET
         self.set_handler = SetHandlerFactory.create_standard_handler()
+        
+        # Handler para STRING
+        self.string_handler = StringHandlerFactory.create_standard_handler()
+        
+        # Handler especializado para STRING multi-línea
+        self.string_multiline_handler = StringMultilineHandlerFactory.create_standard_handler()
+        
+        # Handler para comandos SQL embebidos
+        self.sql_handler = SqlHandlerFactory.create_standard_handler()
         
         # Configuración de valores especiales COBOL para MOVE statements
         self.special_values = {
@@ -636,7 +648,8 @@ class EnhancedCobolConverter:
         # (like "S21-AREA-ENTORNO" that completes "COD-EMPRESA OF")
         if (self.if_context and 
             re.match(r'^[A-Z0-9_-]+$', line) and
-            not line.upper().startswith(('MOVE', 'IF', 'WHEN', 'ELSE', 'END', '--', 'CONTINUE', 'PERFORM', 'CALL', 'EXIT', 'STOP', 'GO', 'GOTO'))):
+            not line.upper().startswith(('MOVE', 'IF', 'WHEN', 'ELSE', 'END', '--', 'CONTINUE', 'PERFORM', 'CALL', 'EXIT', 'STOP', 'GO', 'GOTO')) and
+            line.upper() not in ('ROLLBACK', 'COMMIT')):
             return True
         
         return False
@@ -782,6 +795,31 @@ class EnhancedCobolConverter:
                 result.append(out)
                 indent_stack.append(current_indent + "    ")  # Increase indent for ELSE block
                 
+            elif op in ["STRING_CONTEXT_START", "STRING_CONTEXT_FIELD", "STRING_CONTEXT_INTO"]:
+                # STRING context lines - these are processed but not added to result
+                # until the complete STRING is processed
+                continue
+            
+            elif op in ["STRING_MULTILINE_START", "STRING_MULTILINE_FIELD", "STRING_MULTILINE_DELIMITER"]:
+                # STRING multi-line context lines - these are processed but not added to result
+                # until the complete STRING is processed
+                continue
+            
+            elif op in ["SQL_BLOCK_START", "SQL_COMMAND"]:
+                # SQL context lines - these are processed but not added to result
+                # until the complete SQL block is processed
+                continue
+            
+            elif op == "STRING" and stmt.get("operation_type") == "MULTI_LINE_STRING":
+                # Complete multi-line STRING - process it normally
+                out = self.apply_rule(stmt, current_indent)
+                result.append(out)
+            
+            elif op == "SQL_BLOCK":
+                # Complete SQL block - process it normally
+                out = self.apply_rule(stmt, current_indent)
+                result.append(out)
+            
             else:
                 # Regular statement - use current indent level
                 out = self.apply_rule(stmt, current_indent)
@@ -1837,14 +1875,46 @@ class EnhancedCobolConverter:
         if goback_result:
             return goback_result
         
+        
+        # SQL operations - detect SQL embebido
+        # PRIORIDAD ALTA: Handler para comandos SQL embebidos
+        if self.sql_handler.can_handle(line):
+            sql_result = self.sql_handler.parse_sql_operation(line)
+            if sql_result:
+                return sql_result
+        
         # SET - detect SET operations
         set_result = self.set_handler.parse_set_operation(line)
         if set_result:
             return set_result
         
         # STRING operations - detect STRING operations
-        if line.strip().upper().startswith('STRING '):
-            return self.parse_string_operation_enhanced(line)
+        # PRIORIDAD ALTA: Handler especializado para STRING multi-línea
+        if self.string_multiline_handler.can_handle(line):
+            string_result = self.string_multiline_handler.parse_string_operation(line)
+            if string_result:
+                return string_result
+        
+        # PRIORIDAD ALTA: Si hay contexto de STRING activo, dar prioridad absoluta al string_handler
+        if self.string_handler.is_string_context_active():
+            string_result = self.string_handler.parse_string_operation(line)
+            if string_result:
+                return string_result
+            # Si no hay resultado pero hay contexto activo, no procesar con otros parsers
+            return None
+        
+        # PRIORIDAD NORMAL: Intentar detectar STRING sin contexto activo
+        string_result = self.string_handler.parse_string_operation(line)
+        if string_result:
+            # Si es un STRING completado, retornarlo
+            if string_result.get("op") == "STRING" and string_result.get("operation_type") == "MULTI_LINE_STRING":
+                return string_result
+            # Si es parte del contexto, retornarlo para procesamiento
+            elif string_result.get("op") in ["STRING_CONTEXT_START", "STRING_CONTEXT_FIELD", "STRING_CONTEXT_INTO"]:
+                return string_result
+            # Si es un STRING simple, retornarlo
+            elif string_result.get("op") == "STRING":
+                return string_result
         
         # DISPLAY operations - detect DISPLAY operations
         if line.strip().upper().startswith('DISPLAY '):
@@ -1857,6 +1927,24 @@ class EnhancedCobolConverter:
         # Handle specific DISPLAY patterns that are being missed
         if "'Informar Protesto'" in line or "'Error llamada servicio de Protesto'" in line:
             return self.parse_display_operation_enhanced(line)
+        
+        # ROLLBACK - detect ROLLBACK commands specifically BEFORE IF continuation
+        # PRIORIDAD MÁXIMA: Manejo específico de ROLLBACK
+        if line.strip().upper() == 'ROLLBACK':
+            # Limpiar cualquier contexto de IF activo
+            self.if_context = None
+            return {
+                'op': 'ROLLBACK',
+                'raw': line.strip()
+            }
+        
+        # COMMIT - detect COMMIT commands specifically BEFORE IF continuation
+        # PRIORIDAD MÁXIMA: Manejo específico de COMMIT
+        if line.strip().upper() == 'COMMIT':
+            return {
+                'op': 'COMMIT',
+                'raw': line.strip()
+            }
         
         # Check for IF continuation with qualified names FIRST (before other processing)
         if self._is_if_qualified_continuation(line):
@@ -2124,11 +2212,30 @@ class EnhancedCobolConverter:
         elif op == "GOBACK":
             return self.goback_handler.convert_goback(stmt, base_indent)
         
+        elif op == "ROLLBACK":
+            return f"{base_indent}ROLLBACK;"
+        
+        elif op == "COMMIT":
+            return f"{base_indent}COMMIT;"
+        
         elif op == "SET":
             return self.set_handler.convert_set_operation(stmt, base_indent)
         
+        elif op == "SQL_BLOCK_START":
+            return self.sql_handler.convert_sql_operation(stmt, base_indent)
+        
+        elif op == "SQL_COMMAND":
+            return self.sql_handler.convert_sql_operation(stmt, base_indent)
+        
+        elif op == "SQL_BLOCK":
+            return self.sql_handler.convert_sql_operation(stmt, base_indent)
+        
         elif op == "STRING":
-            return self.convert_string_operation_enhanced(stmt, base_indent)
+            # Verificar si es del handler especializado
+            if stmt.get("operation_type") == "MULTI_LINE_STRING":
+                return self.string_multiline_handler.convert_string_operation(stmt, base_indent)
+            else:
+                return self.string_handler.convert_string_operation(stmt, base_indent)
         
         elif op == "DISPLAY":
             return self.convert_display_operation_enhanced(stmt, base_indent)
@@ -2137,6 +2244,10 @@ class EnhancedCobolConverter:
             return self.convert_qualified_name_enhanced(stmt, base_indent)
         
         elif op == "IF_QUALIFIED_CONTINUATION":
+            # Corrección específica para ROLLBACK mal interpretado
+            component = stmt.get('component', {})
+            if component.get('group') == 'ROLLBACK':
+                return f"{base_indent}ROLLBACK;"
             return self.convert_if_qualified_continuation(stmt, base_indent)
         
         elif op == "EVALUATE":
