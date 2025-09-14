@@ -409,7 +409,7 @@ class EnhancedCobolConverter:
             
             # Parsear sentencias
             if current_procedure:
-                # Verificar si es una sentencia multi-línea (FETCH con INTO o SELECT con INTO)
+                # Verificar si es una sentencia multi-línea
                 if re.match(r'(FETCH|SELECT)\s+[A-Z0-9_-]+', line, re.IGNORECASE):
                     # Buscar líneas continuas que contengan INTO o FROM
                     full_statement = line
@@ -419,6 +419,34 @@ class EnhancedCobolConverter:
                         if next_line and not next_line.startswith('*'):
                             full_statement += " " + next_line
                         j += 1
+                    
+                    statement = self._parse_statement(full_statement)
+                    if statement:
+                        current_statements.append(statement)
+                    i = j
+                elif re.match(r'MOVE\s+', line, re.IGNORECASE):
+                    # Manejar MOVE multi-línea
+                    full_statement = line
+                    j = i + 1
+                    
+                    # Buscar líneas continuas hasta encontrar un punto o una nueva sentencia
+                    while j < len(lines):
+                        next_line = lines[j].strip()
+                        if not next_line or next_line.startswith('*'):
+                            j += 1
+                            continue
+                        
+                        # Si la línea siguiente empieza con TO, es continuación del MOVE
+                        if re.match(r'TO\s+', next_line, re.IGNORECASE):
+                            full_statement += " " + next_line
+                            j += 1
+                        # Si la línea siguiente no empieza con TO y no es continuación, terminar
+                        elif not re.match(r'^\s+[A-Z0-9_-]', next_line, re.IGNORECASE):
+                            break
+                        else:
+                            # Es una línea de continuación (sin TO)
+                            full_statement += " " + next_line
+                            j += 1
                     
                     statement = self._parse_statement(full_statement)
                     if statement:
