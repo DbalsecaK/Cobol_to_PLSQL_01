@@ -57,13 +57,95 @@ python enhanced_converter_v2.py samples/demo1.cob
 
 
 
+
+
 ## 📊 Archivos de Representación Intermedia (IR)
 
 Los siguientes archivos IR han sido generados automáticamente:
 
 - **CAB1040**: `out\CAB1040_ir.json`
 
-### 📅 Última actualización: 2025-09-15 15:50:59
+### 📅 Última actualización: 2025-09-15 16:10:16
+
+### 🔍 Cómo ver la IR:
+
+```bash
+# Ver IR en consola
+python view_ir.py samples/demo1.cob
+
+# Ver IR y guardarla en archivo JSON
+python view_ir.py samples/demo1.cob --save
+```
+
+### 📋 Estructura de la IR:
+
+```json
+{
+  "program": "NOMBRE_PROGRAMA",
+  "variables": [
+    {
+      "name": "VARIABLE",
+      "type": "STRING|NUMERIC",
+      "size": 20
+    }
+  ],
+  "procedures": [
+    {
+      "name": "MAIN",
+      "statements": [
+        {
+          "op": "MOVE|ADD|IF_ELSE|DISPLAY",
+          "src": "origen",
+          "dst": "destino",
+          "raw": "sentencia COBOL original"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## 📅 Última actualización: 2025-09-15 16:03:49
+
+### 🔍 Cómo ver la IR:
+
+```bash
+# Ver IR en consola
+python view_ir.py samples/demo1.cob
+
+# Ver IR y guardarla en archivo JSON
+python view_ir.py samples/demo1.cob --save
+```
+
+### 📋 Estructura de la IR:
+
+```json
+{
+  "program": "NOMBRE_PROGRAMA",
+  "variables": [
+    {
+      "name": "VARIABLE",
+      "type": "STRING|NUMERIC",
+      "size": 20
+    }
+  ],
+  "procedures": [
+    {
+      "name": "MAIN",
+      "statements": [
+        {
+          "op": "MOVE|ADD|IF_ELSE|DISPLAY",
+          "src": "origen",
+          "dst": "destino",
+          "raw": "sentencia COBOL original"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## 📅 Última actualización: 2025-09-15 15:50:59
 
 ### 🔍 Cómo ver la IR:
 

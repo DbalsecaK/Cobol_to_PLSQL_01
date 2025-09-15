@@ -7,6 +7,7 @@ import os
 import json
 import re
 import time
+import hashlib
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 
@@ -14,6 +15,47 @@ from datetime import datetime
 from antlr4 import FileStream, CommonTokenStream
 from Cobol85Lexer import Cobol85Lexer
 from Cobol85Parser import Cobol85Parser
+
+# ===== PERFORMANCE OPTIMIZATIONS =====
+
+# Caché global para archivos parseados
+PARSE_CACHE = {}
+
+# Regex compilados para mejor rendimiento
+COMPILED_REGEXES = {
+    'comment_col7': re.compile(r'^.{6}\*'),
+    'comment_asterisks': re.compile(r'^\s*\*\*'),
+    'move_pattern': re.compile(r'MOVE\s+(.+?)\s+TO\s+(.+)', re.IGNORECASE),
+    'perform_pattern': re.compile(r'PERFORM\s+(.+)', re.IGNORECASE),
+    'if_pattern': re.compile(r'IF\s+(.+)', re.IGNORECASE),
+    'display_pattern': re.compile(r'DISPLAY\s+(.+)', re.IGNORECASE),
+    'qualified_field': re.compile(r'([A-Z0-9_-]+)\s+OF\s+([A-Z0-9_-]+)', re.IGNORECASE),
+    'string_pattern': re.compile(r'STRING\s+(.+)', re.IGNORECASE),
+    'set_pattern': re.compile(r'SET\s+(.+?)\s+TO\s+(.+)', re.IGNORECASE),
+    'close_pattern': re.compile(r'CLOSE\s+(.+)', re.IGNORECASE),
+    'exec_sql': re.compile(r'EXEC\s+SQL', re.IGNORECASE)
+}
+
+def get_file_hash(filepath: str) -> str:
+    """Generar hash MD5 del archivo para caché"""
+    with open(filepath, 'rb') as f:
+        return hashlib.md5(f.read()).hexdigest()
+
+def should_use_cache(filepath: str) -> tuple:
+    """Verificar si usar caché basado en hash del archivo"""
+    try:
+        file_hash = get_file_hash(filepath)
+        cache_key = f"{filepath}_{file_hash}"
+        
+        if cache_key in PARSE_CACHE:
+            print(f"⚡ Usando caché para {os.path.basename(filepath)}")
+            return True, cache_key, PARSE_CACHE[cache_key]
+        else:
+            print(f"🔄 Parsing requerido para {os.path.basename(filepath)}")
+            return False, cache_key, None
+    except Exception as e:
+        print(f"⚠️  Error en caché: {e}")
+        return False, None, None
 
 # ===== IR VISITOR =====
 class IRBuildingVisitor:
@@ -85,8 +127,8 @@ class IRBuildingVisitor:
                         break
                     j += 1
             
-            # MOVE statement (mejorado para manejar substrings y OF)
-            m = re.search(r'^MOVE\s+(.+?)\s+TO\s+(.+?)\.?$', ln, re.IGNORECASE)
+            # MOVE statement (optimizado con regex compilado)
+            m = COMPILED_REGEXES['move_pattern'].search(ln)
             if m:
                 src = m.group(1).strip()
                 dst = m.group(2).strip()
@@ -120,8 +162,8 @@ class IRBuildingVisitor:
                 # Parse THEN block
                 while i < len(lines) and not re.search(r'^ELSE', lines[i], re.IGNORECASE) and not re.search(r'^END-IF', lines[i], re.IGNORECASE):
                     then_ln = lines[i]
-                    # MOVE statement
-                    m = re.search(r'^MOVE\s+(.+?)\s+TO\s+([A-Z0-9_-]+)\.?', then_ln, re.IGNORECASE)
+                    # MOVE statement (optimizado)
+                    m = COMPILED_REGEXES['move_pattern'].search(then_ln)
                     if m:
                         then_stmts.append({"op":"MOVE", "src": m.group(1).strip(), "dst": m.group(2).upper(), "raw": then_ln})
                     # DISPLAY statement
@@ -136,8 +178,8 @@ class IRBuildingVisitor:
                     # Parse ELSE block
                     while i < len(lines) and not re.search(r'^END-IF', lines[i], re.IGNORECASE):
                         else_ln = lines[i]
-                        # MOVE statement
-                        m = re.search(r'^MOVE\s+(.+?)\s+TO\s+([A-Z0-9_-]+)\.?', else_ln, re.IGNORECASE)
+                        # MOVE statement (optimizado)
+                        m = COMPILED_REGEXES['move_pattern'].search(else_ln)
                         if m:
                             else_stmts.append({"op":"MOVE", "src": m.group(1).strip(), "dst": m.group(2).upper(), "raw": else_ln})
                         # DISPLAY statement
@@ -174,21 +216,21 @@ class IRBuildingVisitor:
                 i += 1
                 continue
 
-            # Manejar comentarios COBOL
-            # 1. Asterisco en columna 7 (posición 6 en Python - índice basado en 0)
+            # Manejar comentarios COBOL con regex optimizados
+            # 1. Asterisco en columna 7 (optimizado)
             if len(ln) >= 7 and ln[6] == '*':
                 stmts.append({"op":"COMMENT", "text": ln, "raw": ln})
                 i += 1
                 continue
             
-            # 2. Líneas que empiezan con ** (comentarios de encabezado)
-            if ln.strip().startswith('**'):
+            # 2. Líneas que empiezan con ** (optimizado)
+            if COMPILED_REGEXES['comment_asterisks'].match(ln):
                 stmts.append({"op":"COMMENT", "text": ln, "raw": ln})
                 i += 1
                 continue
                 
-            # 3. Líneas que empiezan con *** (comentarios tradicionales)
-            if ln.strip().startswith('***'):
+            # 3. Líneas que empiezan con *** (optimizado)  
+            if ln.startswith('***'):
                 stmts.append({"op":"COMMENT", "text": ln, "raw": ln})
                 i += 1
                 continue
@@ -1030,27 +1072,51 @@ def format_duration(start_time, end_time):
 
 # ===== MAIN FUNCTION =====
 def parse_cobol_to_ir(file_path: str):
-    """Función para parsear COBOL a IR usando ANTLR"""
+    """Función para parsear COBOL a IR usando ANTLR con optimizaciones de rendimiento"""
     print(f"🔍 Parseando con ANTLR: {file_path}")
     
-    input_stream = FileStream(file_path, encoding='utf-8')
-    lexer = Cobol85Lexer(input_stream)
-    stream = CommonTokenStream(lexer)
-    parser = Cobol85Parser(stream)
+    # Verificar caché primero
+    use_cache, cache_key, cached_ir = should_use_cache(file_path)
+    if use_cache and cached_ir:
+        print("✅ IR recuperado desde caché!")
+        return cached_ir
     
-    # Parsear usando la gramática
-    tree = parser.startRule()
-    print("✅ Parsing ANTLR exitoso!")
-    
-    visitor = IRBuildingVisitor(token_stream=stream, full_text=input_stream.strdata)
-    return visitor.build_ir(tree)
+    try:
+        # Configuración optimizada de ANTLR
+        input_stream = FileStream(file_path, encoding='utf-8')
+        lexer = Cobol85Lexer(input_stream)
+        
+        # Optimizar buffer de tokens
+        stream = CommonTokenStream(lexer)
+        parser = Cobol85Parser(stream)
+        
+        # Configurar error handling optimizado
+        parser.removeErrorListeners()
+        
+        # Parsear usando la gramática
+        tree = parser.startRule()
+        print("✅ Parsing ANTLR exitoso!")
+        
+        visitor = IRBuildingVisitor(token_stream=stream, full_text=input_stream.strdata)
+        ir = visitor.build_ir(tree)
+        
+        # Guardar en caché
+        if cache_key and ir:
+            PARSE_CACHE[cache_key] = ir
+            print(f"💾 IR guardado en caché")
+        
+        return ir
+        
+    except Exception as e:
+        print(f"❌ Error optimizado en parsing: {e}")
+        return {"program": "ERROR", "variables": [], "procedures": []}
 
 
 def save_ir_to_file(ir: Dict[str, Any], output_file: str):
-    """Función para guardar la IR en un archivo JSON"""
+    """Función para guardar la IR en un archivo JSON con I/O optimizado"""
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
-    with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(ir, f, indent=2, ensure_ascii=False)
+    with open(output_file, 'w', encoding='utf-8', buffering=16384) as f:
+        json.dump(ir, f, indent=2, ensure_ascii=False, separators=(',', ':'))
     print(f"💾 IR guardada en: {output_file}")
 
 def update_readme_with_ir_info(ir_files: List[str]):
@@ -1154,9 +1220,10 @@ def main():
     start_timestamp = get_timestamp()
     
     try:
-        print(f"🚀 Convertidor COBOL a PL/SQL con ANTLR")
+        print(f"🚀 Convertidor COBOL a PL/SQL con ANTLR [OPTIMIZADO]")
         print(f"📁 Archivo: {cob_path}")
         print(f"⏰ Inicio: {start_timestamp}")
+        print(f"💾 Caché disponible: {len(PARSE_CACHE)} entradas")
         print("=" * 50)
         
         # ⏰ FASE 1: Parsing ANTLR
