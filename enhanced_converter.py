@@ -11,7 +11,7 @@ import sys
 from typing import Dict, List, Any, Optional, Tuple
 from cobol_condition_parser import CobolConditionParser
 from cobol_flow_control_parser import FlowControlParserFactory
-from cobol_goback_handler import GOBACKHandlerFactory
+from cobol_goback_handler import GOBACKHandlerFactoryarar
 from cobol_set_handler import SetHandlerFactory
 from cobol_string_handler import StringHandlerFactory
 from cobol_string_multiline_handler import StringMultilineHandlerFactory

@@ -1,0 +1,3 @@
+🔍 DEBUG - GAP encontrado: op='ELSE', stmt={'op': 'ELSE', 'raw': 'ELSE'}
+🔍 DEBUG - GAP encontrado: op='ELSE', stmt={'op': 'ELSE', 'raw': 'ELSE'}
+🔍 DEBUG - GAP encontrado: op='ELSE', stmt={'op': 'ELSE', 'raw': 'ELSE'}
