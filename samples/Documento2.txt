@@ -1,0 +1,3 @@
+     el rollback esta incorrecto, adjunto origen cobol "  EXEC SQL
+               ROLLBACK
+           END-EXEC." y mira como está migrado "  ROLLBACK.COD_EMPRESA" y debe quedar  "ROLLBACK;"

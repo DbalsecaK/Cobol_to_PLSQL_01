@@ -456,6 +456,7 @@ def main():
     try:
         # Parsear archivo
         start_time = time.time()
+        start_timestamp = get_timestamp()  # Capturar timestamp real de inicio
         ir = parse_cobol_to_ir_complete(input_file)
         parsing_end_time = time.time()
         parsing_duration = parsing_end_time - start_time
@@ -467,6 +468,7 @@ def main():
         total_io_duration = io_end_time - io_start_time
         
         # Generar reporte
+        end_timestamp = get_timestamp()  # Capturar timestamp real de fin
         report = generate_parsing_report(ir, report_output, parsing_duration, total_io_duration)
         
         print("✅ Archivos generados:")
@@ -485,12 +487,27 @@ def main():
         print(f"   🔧 Statements: {report['parsing_summary']['total_statements']}")
         print(f"   📁 Archivos SELECT: {report['parsing_summary']['file_control_entries']}")
         
+        # Calcular duración real entre timestamps
+        try:
+            start_dt = datetime.strptime(start_timestamp, "%H:%M:%S.%f")
+            end_dt = datetime.strptime(end_timestamp, "%H:%M:%S.%f")
+            
+            # Manejar caso donde se cruza medianoche
+            if end_dt < start_dt:
+                end_dt = end_dt.replace(day=start_dt.day + 1)
+            
+            real_duration = (end_dt - start_dt).total_seconds()
+        except ValueError:
+            # Fallback si hay error en el formato
+            real_duration = parsing_duration + total_io_duration
+        
         print("⏰ RENDIMIENTO:")
-        print(f"   🕐 Inicio: {get_timestamp()}")
-        print(f"   🕐 Fin: {get_timestamp()}")
+        print(f"   🕐 Inicio: {start_timestamp}")
+        print(f"   🕐 Fin: {end_timestamp}")
+        print(f"   ⏰ Duración real: {format_duration(0, real_duration)}")
         print(f"   ⏱️  Parsing: {format_duration(0, parsing_duration)}")
         print(f"   ⏱️  I/O: {format_duration(0, total_io_duration)}")
-        print(f"   ⏱️  Total: {format_duration(0, parsing_duration + total_io_duration)}")
+        print(f"   ⏱️  Total medido: {format_duration(0, parsing_duration + total_io_duration)}")
         print(f"   ⚡ Velocidad: {report['performance_metrics']['nodes_per_second']} nodos/seg")
         
         print("📊 TIPOS DE NODOS MÁS COMUNES:")

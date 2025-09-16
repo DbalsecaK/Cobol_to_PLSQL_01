@@ -11,5 +11,13 @@ python advanced_converter.py samples/C1040.cob
 
 python enhanced_converter.py samples/C1040.cob
 
+python enhanced_converter_fixed.py samples/C1040.cob
+python enhanced_converter_perform_fixed.py samples/C1040.cob
+
+
+
+enhanced_converter.py UNIFICADO OK
+
+
 
 https://www.youtube.com/watch?v=1B9FqM5bgq4
