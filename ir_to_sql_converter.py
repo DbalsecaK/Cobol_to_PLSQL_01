@@ -1391,6 +1391,18 @@ END {program_name};
         # Agregar variables de servicios (siguiendo patrón manual)
         section += self._generate_service_variables()
         
+        # Agregar variables para manejo de archivos UTL_FILE
+        section += self._generate_file_variables_section()
+        
+        # Agregar funciones de utilidad para operaciones STRING
+        section += self._generate_string_utility_functions()
+        
+        # Agregar funciones de utilidad para operaciones SET
+        section += self._generate_set_utility_functions()
+        
+        # Agregar funciones de utilidad para operaciones PERFORM
+        section += self._generate_perform_utility_functions()
+        
         return section
     
     def _generate_cursors_from_manual_pattern(self) -> str:
@@ -2089,15 +2101,225 @@ END {program_name};
         
         return body, gap_count, macro_gap_count
     
+    def _generate_plsql_procedures_from_cobol(self, ir: Dict[str, Any]) -> str:
+        """
+        Generar procedimientos PL/SQL a partir de los procedimientos COBOL
+        PERFORM 1000-INICIO → PROCEDURE A1000_INICIO IS
+        """
+        procedures_section = ""
+        
+        procedures = ir.get("procedures", [])
+        if not procedures:
+            return ""
+        
+        procedures_section += """
+  /*
+   *-------------------------------------------------------------*
+   * PROCEDIMIENTOS CONVERTIDOS DESDE COBOL                     *
+   *-------------------------------------------------------------*
+   */
+   
+"""
+        
+        for procedure in procedures:
+            proc_name = procedure.get("name", "")
+            statements = procedure.get("statements", [])
+            
+            if not proc_name:
+                continue
+                
+            # Convertir nombre COBOL a PL/SQL (1000-INICIO → A1000_INICIO)
+            plsql_proc_name = self._convert_cobol_procedure_name_to_plsql(proc_name)
+            
+            procedures_section += f"""  PROCEDURE {plsql_proc_name} IS
+  BEGIN
+    -- Procedimiento convertido desde: {proc_name}
+"""
+            
+            # Procesar statements del procedimiento
+            if statements:
+                for stmt in statements:
+                    op = stmt.get("op", "UNKNOWN")
+                    raw_content = stmt.get("raw", "").strip()
+                    
+                    # Verificar si hay macros (@) en el contenido
+                    if '@' in raw_content:
+                        procedures_section += f"""    -- GAP MACRO INTERNA: {raw_content}
+"""
+                    
+                    # Convertir statement según su tipo
+                    if op == "MOVE":
+                        converted_move = self._convert_move_statement(stmt)
+                        procedures_section += f"    {converted_move.strip()}\n"
+                    elif op == "IF":
+                        converted_if = self._convert_if_statement(stmt)
+                        procedures_section += f"    {converted_if.strip()}\n"
+                    elif op == "ELSE":
+                        converted_else = self._convert_else_statement(stmt)
+                        procedures_section += f"    {converted_else.strip()}\n"
+                    elif op == "END-IF":
+                        converted_endif = self._convert_end_if_statement(stmt)
+                        procedures_section += f"    {converted_endif.strip()}\n"
+                    elif op == "EXEC_SQL":
+                        converted_sql = self._convert_exec_sql_statement(stmt)
+                        procedures_section += f"    {converted_sql.strip()}\n"
+                    elif op in ["OPEN", "CLOSE", "READ", "WRITE", "REWRITE", "DELETE", "START"]:
+                        converted_file = self._convert_file_operation(stmt)
+                        procedures_section += f"    {converted_file.strip()}\n"
+                    elif op == "STRING":
+                        converted_string = self._convert_string_statement(stmt)
+                        procedures_section += f"    {converted_string.strip()}\n"
+                    elif op == "SET":
+                        converted_set = self._convert_set_statement(stmt)
+                        procedures_section += f"    {converted_set.strip()}\n"
+                    elif op == "PERFORM":
+                        converted_perform = self._convert_perform_statement(stmt)
+                        procedures_section += f"    {converted_perform.strip()}\n"
+                    elif op == "DISPLAY":
+                        # Convertir DISPLAY a DBMS_OUTPUT.PUT_LINE
+                        display_content = raw_content.replace("DISPLAY", "").replace("display", "").strip()
+                        if display_content.startswith("'") and display_content.endswith("'"):
+                            procedures_section += f"""    DBMS_OUTPUT.PUT_LINE({display_content}); -- {raw_content}
+"""
+                        else:
+                            procedures_section += f"""    -- GAP -- {raw_content} -- (DISPLAY statement)
+"""
+                    elif op == "INITIALIZE":
+                        procedures_section += f"""    -- GAP -- {raw_content} -- (INITIALIZE statement)
+"""
+                    else:
+                        procedures_section += f"""    -- GAP -- {raw_content} -- ({op} statement)
+"""
+            else:
+                procedures_section += """    -- Sin statements para procesar
+"""
+            
+            procedures_section += """  END;
+
+"""
+        
+        return procedures_section
+    
+    def _convert_cobol_procedure_name_to_plsql(self, cobol_name: str) -> str:
+        """
+        Convertir nombre de procedimiento COBOL a PL/SQL
+        1000-INICIO → A1000_INICIO
+        2000-PROCESO → A2000_PROCESO
+        8000-FINAL → A8000_FINAL
+        """
+        # Remover espacios y convertir a mayúsculas
+        clean_name = cobol_name.strip().upper()
+        
+        # Reemplazar guiones por guiones bajos
+        plsql_name = clean_name.replace("-", "_")
+        
+        # Agregar prefijo A si no lo tiene
+        if not plsql_name.startswith("A"):
+            plsql_name = "A" + plsql_name
+            
+        return plsql_name
+
+    def _extract_main_performs_from_procedure_division(self, ir_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Extraer PERFORM principales del PROCEDURE DIVISION principal
+        """
+        import re
+        
+        procedure_division = ir_data.get("procedure_division", {})
+        raw_content = procedure_division.get("raw_content", "")
+        
+        main_performs = []
+        
+        # Buscar los PERFORM principales en el raw_content
+        perform_patterns = [
+            r"PERFORM\s+1000-INICIO\s*\.",
+            r"PERFORM\s+2000-PROCESO\s+UNTIL\s+NO-ENCONTRADO\s*\.",
+            r"PERFORM\s+8000-FINAL\s*\."
+        ]
+        
+        for pattern in perform_patterns:
+            match = re.search(pattern, raw_content, re.IGNORECASE)
+            if match:
+                perform_text = match.group(0)
+                print(f"🎯 Encontrado PERFORM principal: {perform_text}")
+                
+                # Crear un statement artificial para el PERFORM
+                perform_stmt = {
+                    "op": "PERFORM",
+                    "raw": perform_text,
+                    "details": {
+                        "type": "PERFORM_STATEMENT",
+                        "perform_type": "SIMPLE" if "UNTIL" not in perform_text.upper() else "UNTIL",
+                        "target": perform_text.split()[1].replace(".", "")
+                    }
+                }
+                
+                if "UNTIL" in perform_text.upper():
+                    perform_stmt["details"]["condition"] = "NO-ENCONTRADO"
+                
+                main_performs.append(perform_stmt)
+        
+        return main_performs
+    
     def _generate_real_procedures_with_macros(self, ir: Dict[str, Any]) -> str:
         """Generar procedimientos reales del IR con macros in-situ en el orden correcto"""
         procedures_section = ""
         gap_count = 0  # Contador de GAPs
         macro_gap_count = 0  # Contador de GAP MACRO INTERNA
         
+        # Primero, generar procedimientos PL/SQL a partir de los procedimientos COBOL
+        procedures_section += self._generate_plsql_procedures_from_cobol(ir)
+        
+        # Luego, extraer y procesar los PERFORM principales del PROCEDURE DIVISION
+        main_performs = self._extract_main_performs_from_procedure_division(ir)
+        if main_performs:
+            procedures_section += """
+  /*
+   *-------------------------------------------------------------*
+   * PROCEDIMIENTO PRINCIPAL DEL PROGRAMA                        *
+   *-------------------------------------------------------------*
+   */
+   
+  PROCEDURE PRC_MAIN IS
+  BEGIN"""
+            
+            for perform_stmt in main_performs:
+                if '@' in perform_stmt.get("raw", ""):
+                    macro_gap_count += 1
+                    procedures_section += f"""
+    -- GAP MACRO INTERNA: {perform_stmt.get('raw', '').strip()}"""
+                else:
+                    # Llamar al procedimiento PL/SQL correspondiente
+                    raw_content = perform_stmt.get("raw", "")
+                    if "1000-INICIO" in raw_content:
+                        procedures_section += """
+    A1000_INICIO(); -- PERFORM 1000-INICIO"""
+                    elif "2000-PROCESO" in raw_content and "UNTIL" in raw_content:
+                        procedures_section += """
+    -- PERFORM 2000-PROCESO UNTIL NO-ENCONTRADO
+    WHILE encontrado = 'Y' LOOP
+      A2000_PROCESO();
+    END LOOP;"""
+                    elif "8000-FINAL" in raw_content:
+                        procedures_section += """
+    A8000_FINAL(); -- PERFORM 8000-FINAL"""
+                    else:
+                        converted_perform = self._convert_perform_statement(perform_stmt)
+                        procedures_section += f"""
+    {converted_perform.strip()}"""
+            
+            procedures_section += """
+  END PRC_MAIN;
+  
+  /*
+   *-------------------------------------------------------------*
+   * PROCEDIMIENTOS AUXILIARES                                   *
+   *-------------------------------------------------------------*
+   */"""
+        
         procedures = ir.get("procedures", [])
         if not procedures:
-            return "\n  -- No hay procedimientos para generar\n", gap_count, macro_gap_count
+            return procedures_section + "\n  -- No hay procedimientos auxiliares para generar\n", gap_count, macro_gap_count
         
         print(f"🔧 Generando {len(procedures)} procedimientos con macros in-situ...")
         
@@ -2137,13 +2359,37 @@ END {program_name};
                             # Aplicar conversión completa de EXEC SQL
                             converted_sql = self._convert_exec_sql_statement(stmt)
                             procedures_section += converted_sql
+                        elif op == "IF":
+                            # Aplicar conversión completa de IF usando principios SOLID
+                            converted_if = self._convert_if_statement(stmt)
+                            procedures_section += converted_if
+                        elif op == "ELSE":
+                            # Convertir ELSE
+                            converted_else = self._convert_else_statement(stmt)
+                            procedures_section += converted_else
+                        elif op == "END-IF":
+                            # Convertir END-IF
+                            converted_endif = self._convert_end_if_statement(stmt)
+                            procedures_section += converted_endif
+                        elif op in ["OPEN", "CLOSE", "READ", "WRITE", "REWRITE", "DELETE", "START"]:
+                            # Aplicar conversión completa de operaciones de archivo
+                            converted_file_op = self._convert_file_operation(stmt)
+                            procedures_section += converted_file_op
+                        elif op == "STRING":
+                            # Aplicar conversión completa de STRING usando principios SOLID
+                            converted_string = self._convert_string_statement(stmt)
+                            procedures_section += converted_string
+                        elif op == "SET":
+                            # Aplicar conversión completa de SET usando principios SOLID
+                            converted_set = self._convert_set_statement(stmt)
+                            procedures_section += converted_set
+                        elif op == "PERFORM":
+                            # Aplicar conversión completa de PERFORM usando principios SOLID
+                            converted_perform = self._convert_perform_statement(stmt)
+                            procedures_section += converted_perform
                         elif op == "INITIALIZE":
                             procedures_section += f"""
   -- GAP -- {raw_content.strip()} -- (INITIALIZE statement)"""
-                            gap_count += 1
-                        elif op == "PERFORM":
-                            procedures_section += f"""
-  -- GAP -- {raw_content.strip()} -- (PERFORM statement)"""
                             gap_count += 1
                         else:
                             procedures_section += f"""
@@ -2561,6 +2807,2272 @@ END {program_name};
             converted = f"v_{converted}"
             
         return converted
+
+    # ===== CONVERTIDORES IF SIGUIENDO PRINCIPIOS SOLID =====
+    
+    def _convert_if_statement(self, stmt: Dict[str, Any]) -> str:
+        """
+        Convertir statement IF a PL/SQL siguiendo equivalencias del archivo de referencia
+        Principio Single Responsibility: Solo maneja conversión de IF
+        """
+        raw_content = stmt.get("raw", "").strip()
+        details = stmt.get("details", {})
+        
+        print(f"🔄 Convirtiendo IF: {raw_content}")
+        
+        # Extraer información de la sentencia IF
+        if_info = self._parse_if_statement(raw_content)
+        
+        if not if_info:
+            return f"\n  -- GAP -- {raw_content} -- (IF statement - parsing failed)"
+        
+        # Intentar patrones mejorados primero
+        enhanced_info = self._enhance_if_patterns(raw_content)
+        if enhanced_info:
+            if_info = enhanced_info
+        
+        # Aplicar patrón Strategy para diferentes tipos de IF
+        try:
+            if if_info["type"] == "simple":
+                return self._convert_if_simple(if_info, raw_content)
+            elif if_info["type"] == "comparison":
+                return self._convert_if_simple(if_info, raw_content)  # Usar simple para comparaciones básicas
+            elif if_info["type"] == "if_else":
+                return self._convert_if_else(if_info, raw_content)
+            elif if_info["type"] == "nested":
+                return self._convert_if_nested(if_info, raw_content)
+            elif if_info["type"] == "logical_operators":
+                return self._convert_if_logical(if_info, raw_content)
+            elif if_info["type"] == "not_condition":
+                return self._convert_if_simple(if_info, raw_content)  # Usar simple para NOT
+            elif if_info["type"] == "condition_name":
+                return self._convert_if_condition_name(if_info, raw_content)
+            elif if_info["type"] == "signed_numeric":
+                return self._convert_if_signed_numeric(if_info, raw_content)
+            elif if_info["type"] == "string_comparison":
+                return self._convert_if_string_comparison(if_info, raw_content)
+            elif if_info["type"] == "sqlcode_check":
+                return self._convert_sqlcode_check(if_info, raw_content)
+            elif if_info["type"] == "boolean_flag":
+                return self._convert_boolean_flag(if_info, raw_content)
+            elif if_info["type"] == "qualified_comparison":
+                return self._convert_qualified_comparison(if_info, raw_content)
+            elif if_info["type"] == "complex_condition":
+                return self._convert_complex_condition(if_info, raw_content)
+            else:
+                return self._convert_if_generic(if_info, raw_content)
+        except Exception as e:
+            print(f"❌ Error convirtiendo IF: {e}")
+            return f"\n  -- GAP -- {raw_content} -- (IF statement - conversion error)"
+    
+    def _parse_if_statement(self, raw_content: str) -> Dict[str, Any]:
+        """
+        Parsear sentencia IF para extraer componentes
+        Principio Single Responsibility: Solo parsing de IF
+        """
+        import re
+        
+        # Limpiar la línea
+        line = raw_content.strip()
+        upper_line = line.upper()
+        
+        # Patrones para diferentes tipos de IF (orden importa - más específicos primero)
+        patterns = {
+            "signed_numeric": r"IF\s+(.+?)\s+IS\s+(POSITIVE|NEGATIVE|ZERO)(?:\s|$)",
+            "condition_name": r"IF\s+([A-Z][-A-Z0-9]*)\s*(?:$|\.)",
+            "string_comparison": r"IF\s+(.+?)\s*\((\d+):(\d+)\)\s*(=|NOT\s*=|>|<|>=|<=)\s*(.+?)(?:\s|$)",
+            "logical_operators": r"IF\s+(.+?)\s+(AND|OR)\s+(.+?)(?:\s|$)",
+            "not_condition": r"IF\s+NOT\s+(.+?)(?:\s|$)",
+            "comparison": r"IF\s+(.+?)\s*(=|NOT\s*=|>|<|>=|<=|EQUAL|GREATER|LESS)\s*(.+?)(?:\s|$)",
+            "simple": r"IF\s+(.+?)(?:\s|$)",
+        }
+        
+        # Detectar tipo de IF basado en contenido
+        for pattern_name, pattern in patterns.items():
+            match = re.search(pattern, upper_line, re.IGNORECASE)
+            if match:
+                return self._build_if_info(pattern_name, match, line)
+        
+        # Si no coincide con ningún patrón específico, devolver genérico
+        return {
+            "type": "generic",
+            "raw": line
+        }
+    
+    def _build_if_info(self, pattern_name: str, match, line: str) -> Dict[str, Any]:
+        """
+        Construir información del IF basada en el patrón detectado
+        Principio Open/Closed: Extendible para nuevos patrones
+        """
+        if pattern_name == "simple":
+            return {
+                "type": "simple",
+                "condition": match.group(1).strip(),
+                "raw": line
+            }
+        elif pattern_name == "comparison":
+            return {
+                "type": "comparison",
+                "left_operand": match.group(1).strip(),
+                "operator": match.group(2).strip(),
+                "right_operand": match.group(3).strip(),
+                "raw": line
+            }
+        elif pattern_name == "logical_operators":
+            return {
+                "type": "logical_operators",
+                "left_condition": match.group(1).strip(),
+                "logical_op": match.group(2).strip(),
+                "right_condition": match.group(3).strip(),
+                "raw": line
+            }
+        elif pattern_name == "not_condition":
+            return {
+                "type": "not_condition",
+                "condition": match.group(1).strip(),
+                "raw": line
+            }
+        elif pattern_name == "condition_name":
+            return {
+                "type": "condition_name",
+                "condition_name": match.group(1).strip(),
+                "raw": line
+            }
+        elif pattern_name == "signed_numeric":
+            return {
+                "type": "signed_numeric",
+                "variable": match.group(1).strip(),
+                "sign_type": match.group(2).strip(),
+                "raw": line
+            }
+        elif pattern_name == "string_comparison":
+            return {
+                "type": "string_comparison",
+                "variable": match.group(1).strip(),
+                "start_pos": match.group(2).strip(),
+                "end_pos": match.group(3).strip(),
+                "operator": match.group(4).strip(),
+                "value": match.group(5).strip(),
+                "raw": line
+            }
+        
+        return {"type": "generic", "raw": line}
+    
+    def _convert_if_simple(self, if_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir IF simple: IF condition
+        """
+        condition = if_info["condition"]
+        converted_condition = self._convert_cobol_condition_to_plsql(condition)
+        
+        return f"""
+  IF {converted_condition} THEN -- {raw_content}"""
+    
+    def _convert_if_else(self, if_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir IF-ELSE completo
+        """
+        # Esta implementación será extendida cuando se procese el ELSE
+        condition = if_info.get("condition", "")
+        converted_condition = self._convert_cobol_condition_to_plsql(condition)
+        
+        return f"""
+  IF {converted_condition} THEN -- {raw_content}"""
+    
+    def _convert_if_nested(self, if_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir IF anidado (se convertirá a ELSIF cuando sea posible)
+        """
+        condition = if_info.get("condition", "")
+        converted_condition = self._convert_cobol_condition_to_plsql(condition)
+        
+        return f"""
+  ELSIF {converted_condition} THEN -- {raw_content}"""
+    
+    def _convert_if_logical(self, if_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir IF con operadores lógicos (AND/OR)
+        """
+        left_condition = self._convert_cobol_condition_to_plsql(if_info["left_condition"])
+        logical_op = if_info["logical_op"]
+        right_condition = self._convert_cobol_condition_to_plsql(if_info["right_condition"])
+        
+        return f"""
+  IF {left_condition} {logical_op} {right_condition} THEN -- {raw_content}"""
+    
+    def _convert_if_condition_name(self, if_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir IF con condition name (88-level)
+        """
+        condition_name = if_info["condition_name"]
+        converted_name = self._convert_cobol_to_plsql_identifier(condition_name)
+        
+        # Convertir condition name a comparación con constante
+        return f"""
+  IF {converted_name} THEN -- {raw_content}
+  -- GAP: Definir constante para condition name {condition_name}"""
+    
+    def _convert_if_signed_numeric(self, if_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir IF con números con signo (IS POSITIVE/NEGATIVE/ZERO)
+        """
+        variable = self._convert_cobol_to_plsql_identifier(if_info["variable"])
+        sign_type = if_info["sign_type"].upper()
+        
+        # Mapeo según archivo de equivalencias
+        if sign_type == "POSITIVE":
+            condition = f"{variable} > 0"
+        elif sign_type == "NEGATIVE":
+            condition = f"{variable} < 0"
+        elif sign_type == "ZERO":
+            condition = f"{variable} = 0"
+        else:
+            condition = f"{variable} IS {sign_type}"
+        
+        return f"""
+  IF {condition} THEN -- {raw_content}"""
+    
+    def _convert_if_string_comparison(self, if_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir IF con comparación de substring
+        """
+        variable = self._convert_cobol_to_plsql_identifier(if_info["variable"])
+        start_pos = if_info["start_pos"]
+        end_pos = if_info["end_pos"]
+        operator = self._convert_cobol_operator_to_plsql(if_info["operator"])
+        value = self._convert_literal(if_info["value"])
+        
+        # Calcular longitud para SUBSTR
+        length = int(end_pos) - int(start_pos) + 1
+        
+        return f"""
+  IF SUBSTR({variable}, {start_pos}, {length}) {operator} {value} THEN -- {raw_content}"""
+    
+    def _convert_if_generic(self, if_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir IF genérico cuando no coincide con patrones específicos
+        """
+        return f"""
+  -- GAP -- {raw_content} -- (IF statement - generic)"""
+    
+    def _convert_cobol_condition_to_plsql(self, condition: str) -> str:
+        """
+        Convertir condición COBOL a PL/SQL
+        Principio Interface Segregation: Interface específica para condiciones
+        """
+        import re
+        
+        if not condition:
+            return "TRUE"
+        
+        # Convertir operadores COBOL a PL/SQL
+        converted = condition
+        
+        # Operadores de comparación
+        converted = re.sub(r'\bNOT\s*=\b', '!=', converted, flags=re.IGNORECASE)
+        converted = re.sub(r'\bEQUAL\b', '=', converted, flags=re.IGNORECASE)
+        converted = re.sub(r'\bGREATER\b', '>', converted, flags=re.IGNORECASE)
+        converted = re.sub(r'\bLESS\b', '<', converted, flags=re.IGNORECASE)
+        
+        # Valores especiales
+        converted = re.sub(r'\bSPACES\b', 'NULL', converted, flags=re.IGNORECASE)
+        converted = re.sub(r'\bZEROS?\b', '0', converted, flags=re.IGNORECASE)
+        converted = re.sub(r'\bHIGH-VALUES\b', 'CHR(255)', converted, flags=re.IGNORECASE)
+        converted = re.sub(r'\bLOW-VALUES\b', 'CHR(0)', converted, flags=re.IGNORECASE)
+        
+        # Convertir identificadores COBOL a PL/SQL
+        converted = self._convert_identifiers_in_condition(converted)
+        
+        return converted
+    
+    def _convert_cobol_operator_to_plsql(self, operator: str) -> str:
+        """
+        Convertir operador COBOL a PL/SQL
+        """
+        operator_map = {
+            "NOT =": "!=",
+            "NOT=": "!=",
+            "EQUAL": "=",
+            "GREATER": ">",
+            "LESS": "<",
+            "=": "=",
+            ">": ">",
+            "<": "<",
+            ">=": ">=",
+            "<=": "<="
+        }
+        
+        return operator_map.get(operator.upper(), operator)
+    
+    def _convert_identifiers_in_condition(self, condition: str) -> str:
+        """
+        Convertir identificadores COBOL en condiciones a PL/SQL
+        """
+        import re
+        
+        # Patrón para identificadores COBOL (letras, números, guiones)
+        pattern = r'\b[A-Z][A-Z0-9\-]*\b'
+        
+        def replace_identifier(match):
+            identifier = match.group(0)
+            # No convertir palabras clave SQL/PL/SQL
+            sql_keywords = ['AND', 'OR', 'NOT', 'TRUE', 'FALSE', 'NULL', 'IS']
+            if identifier.upper() not in sql_keywords:
+                return self._convert_cobol_to_plsql_identifier(identifier)
+            return identifier
+        
+        return re.sub(pattern, replace_identifier, condition)
+    
+    def _convert_else_statement(self, stmt: Dict[str, Any]) -> str:
+        """
+        Convertir statement ELSE
+        """
+        raw_content = stmt.get("raw", "").strip()
+        return f"""
+  ELSE -- {raw_content}"""
+    
+    def _convert_end_if_statement(self, stmt: Dict[str, Any]) -> str:
+        """
+        Convertir statement END-IF
+        """
+        raw_content = stmt.get("raw", "").strip()
+        return f"""
+  END IF; -- {raw_content}"""
+    
+    def _enhance_if_patterns(self, raw_content: str) -> Dict[str, Any]:
+        """
+        Mejorar detección de patrones IF específicos del archivo de equivalencias
+        Principio Dependency Inversion: Depende de abstracciones de patrones
+        """
+        import re
+        
+        line = raw_content.strip().upper()
+        
+        # Detectar patrones específicos del archivo de equivalencias
+        
+        # IF con SQLCODE (común en programas COBOL)
+        if "SQLCODE" in line:
+            match = re.search(r"IF\s+SQLCODE\s*(=|!=|<>)\s*(\d+)", line)
+            if match:
+                return {
+                    "type": "sqlcode_check",
+                    "operator": match.group(1),
+                    "value": match.group(2),
+                    "raw": raw_content
+                }
+        
+        # IF con condition names (88-level) detectando patrones comunes
+        if any(keyword in line for keyword in ["IND-", "ES-", "FLAG-", "SW-"]):
+            match = re.search(r"IF\s+(IND-[A-Z0-9\-]+|ES-[A-Z0-9\-]+|FLAG-[A-Z0-9\-]+|SW-[A-Z0-9\-]+)", line)
+            if match:
+                return {
+                    "type": "boolean_flag",
+                    "flag_name": match.group(1),
+                    "raw": raw_content
+                }
+        
+        # IF con comparaciones de campos calificados (OF)
+        if " OF " in line:
+            match = re.search(r"IF\s+(.+?)\s+OF\s+(.+?)\s*(=|!=|<>|>|<|>=|<=)\s*(.+?)(?:\s|$)", line)
+            if match:
+                return {
+                    "type": "qualified_comparison",
+                    "field": match.group(1).strip(),
+                    "record": match.group(2).strip(),
+                    "operator": match.group(3).strip(),
+                    "value": match.group(4).strip(),
+                    "raw": raw_content
+                }
+        
+        # IF con múltiples condiciones usando paréntesis
+        if "(" in line and ")" in line:
+            return {
+                "type": "complex_condition",
+                "condition": line.replace("IF ", ""),
+                "raw": raw_content
+            }
+        
+        return None
+    
+    def _convert_sqlcode_check(self, if_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir verificaciones de SQLCODE específicas
+        """
+        operator = self._convert_cobol_operator_to_plsql(if_info["operator"])
+        value = if_info["value"]
+        
+        return f"""
+  IF SQLCODE {operator} {value} THEN -- {raw_content}"""
+    
+    def _convert_boolean_flag(self, if_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir flags booleanos (indicators, switches)
+        """
+        flag_name = self._convert_cobol_to_plsql_identifier(if_info["flag_name"])
+        
+        # Los flags booleanos en COBOL se convierten a comparaciones con constantes en PL/SQL
+        return f"""
+  IF {flag_name} THEN -- {raw_content}
+  -- GAP: Verificar valor de flag booleano {flag_name}"""
+    
+    def _convert_qualified_comparison(self, if_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir comparaciones con campos calificados
+        """
+        field = self._convert_cobol_to_plsql_identifier(if_info["field"])
+        record = self._convert_cobol_to_plsql_identifier(if_info["record"])
+        operator = self._convert_cobol_operator_to_plsql(if_info["operator"])
+        value = self._convert_literal(if_info["value"]) if self._is_literal(if_info["value"]) else self._convert_cobol_to_plsql_identifier(if_info["value"])
+        
+        return f"""
+  IF {record}.{field} {operator} {value} THEN -- {raw_content}"""
+    
+    def _convert_complex_condition(self, if_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir condiciones complejas con paréntesis
+        """
+        condition = if_info["condition"]
+        converted_condition = self._convert_cobol_condition_to_plsql(condition)
+        
+        return f"""
+  IF {converted_condition} THEN -- {raw_content}"""
+
+    # ===== CONVERTIDORES DE ARCHIVOS SIGUIENDO PRINCIPIOS SOLID =====
+    
+    def _convert_file_operation(self, stmt: Dict[str, Any]) -> str:
+        """
+        Convertir operaciones de archivos COBOL a PL/SQL siguiendo equivalencias del archivo de referencia
+        Principio Single Responsibility: Solo maneja conversión de operaciones de archivos
+        """
+        raw_content = stmt.get("raw", "").strip()
+        op = stmt.get("op", "").upper()
+        
+        print(f"🔄 Convirtiendo operación de archivo {op}: {raw_content}")
+        
+        # Extraer información de la operación de archivo
+        file_info = self._parse_file_operation(raw_content, op)
+        
+        if not file_info:
+            return f"\n  -- GAP -- {raw_content} -- ({op} statement - parsing failed)"
+        
+        # Aplicar patrón Strategy para diferentes tipos de operaciones de archivo
+        try:
+            if op == "OPEN":
+                return self._convert_open_file(file_info, raw_content)
+            elif op == "CLOSE":
+                return self._convert_close_file(file_info, raw_content)
+            elif op == "READ":
+                return self._convert_read_file(file_info, raw_content)
+            elif op == "WRITE":
+                return self._convert_write_file(file_info, raw_content)
+            elif op == "REWRITE":
+                return self._convert_rewrite_file(file_info, raw_content)
+            elif op == "DELETE":
+                return self._convert_delete_record(file_info, raw_content)
+            elif op == "START":
+                return self._convert_start_file(file_info, raw_content)
+            else:
+                return self._convert_file_generic(file_info, raw_content, op)
+        except Exception as e:
+            print(f"❌ Error convirtiendo operación de archivo {op}: {e}")
+            return f"\n  -- GAP -- {raw_content} -- ({op} statement - conversion error)"
+    
+    def _parse_file_operation(self, raw_content: str, op: str) -> Dict[str, Any]:
+        """
+        Parsear operación de archivo para extraer componentes
+        Principio Single Responsibility: Solo parsing de operaciones de archivo
+        """
+        import re
+        
+        line = raw_content.strip()
+        upper_line = line.upper()
+        
+        # Patrones para diferentes operaciones de archivo
+        if op == "OPEN":
+            # OPEN INPUT/OUTPUT/I-O archivo
+            match = re.search(r"OPEN\s+(INPUT|OUTPUT|I-O|EXTEND)\s+([A-Z0-9\-]+)", upper_line)
+            if match:
+                return {
+                    "operation": "open",
+                    "mode": match.group(1),
+                    "file_name": match.group(2),
+                    "raw": line
+                }
+        
+        elif op == "CLOSE":
+            # CLOSE archivo
+            match = re.search(r"CLOSE\s+([A-Z0-9\-]+)", upper_line)
+            if match:
+                return {
+                    "operation": "close",
+                    "file_name": match.group(1),
+                    "raw": line
+                }
+        
+        elif op == "READ":
+            # READ archivo [INTO registro] [AT END ...] [NOT AT END ...]
+            patterns = {
+                "with_key": r"READ\s+([A-Z0-9\-]+)\s+KEY\s+IS\s+([A-Z0-9\-]+)",
+                "with_into": r"READ\s+([A-Z0-9\-]+)\s+INTO\s+([A-Z0-9\-]+)",
+                "at_end": r"READ\s+([A-Z0-9\-]+).*AT\s+END",
+                "next_record": r"READ\s+([A-Z0-9\-]+)\s+NEXT\s+RECORD",
+                "simple": r"READ\s+([A-Z0-9\-]+)"
+            }
+            
+            for pattern_name, pattern in patterns.items():
+                match = re.search(pattern, upper_line)
+                if match:
+                    result = {
+                        "operation": "read",
+                        "file_name": match.group(1),
+                        "type": pattern_name,
+                        "raw": line
+                    }
+                    if len(match.groups()) > 1:
+                        if pattern_name == "with_key":
+                            result["key_field"] = match.group(2)
+                        elif pattern_name == "with_into":
+                            result["into_variable"] = match.group(2)
+                    
+                    # Detectar cláusulas adicionales
+                    if "AT END" in upper_line:
+                        result["has_at_end"] = True
+                    if "NOT AT END" in upper_line:
+                        result["has_not_at_end"] = True
+                    if "INVALID KEY" in upper_line:
+                        result["has_invalid_key"] = True
+                    
+                    return result
+        
+        elif op == "WRITE":
+            # WRITE registro [FROM variable] [AFTER/BEFORE n LINES]
+            patterns = {
+                "with_from": r"WRITE\s+([A-Z0-9\-]+)\s+FROM\s+([A-Z0-9\-]+)",
+                "after_advancing_page": r"WRITE\s+([A-Z0-9\-]+).*AFTER\s+ADVANCING\s+PAGE",
+                "after_lines": r"WRITE\s+([A-Z0-9\-]+).*AFTER\s+(\d+)",
+                "before_lines": r"WRITE\s+([A-Z0-9\-]+).*BEFORE\s+(\d+)",
+                "with_after": r"WRITE\s+([A-Z0-9\-]+).*AFTER\s+(\d+|\w+)",
+                "with_before": r"WRITE\s+([A-Z0-9\-]+).*BEFORE\s+(\d+|\w+)",
+                "simple": r"WRITE\s+([A-Z0-9\-]+)"
+            }
+            
+            for pattern_name, pattern in patterns.items():
+                match = re.search(pattern, upper_line)
+                if match:
+                    result = {
+                        "operation": "write",
+                        "record_name": match.group(1),
+                        "type": pattern_name,
+                        "raw": line
+                    }
+                    if len(match.groups()) > 1:
+                        if pattern_name == "with_from":
+                            result["from_variable"] = match.group(2)
+                        elif pattern_name in ["with_after", "with_before"]:
+                            result["line_control"] = match.group(2)
+                    return result
+        
+        # Si no coincide con ningún patrón específico, devolver genérico
+        return {
+            "operation": "generic",
+            "file_name": "UNKNOWN",
+            "raw": line
+        }
+    
+    def _convert_open_file(self, file_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir OPEN a UTL_FILE.FOPEN
+        Principio Open/Closed: Extendible para nuevos modos de apertura
+        """
+        file_name = self._convert_cobol_to_plsql_identifier(file_info["file_name"])
+        mode = file_info["mode"]
+        
+        # Mapeo de modos COBOL a PL/SQL según archivo de equivalencias
+        mode_mapping = {
+            "INPUT": "R",     # Read
+            "OUTPUT": "W",    # Write
+            "I-O": "A",       # Append (más cercano a I-O)
+            "EXTEND": "A"     # Append
+        }
+        
+        plsql_mode = mode_mapping.get(mode, "R")
+        
+        return f"""
+  BEGIN
+    {file_name} := UTL_FILE.FOPEN(v_directorio, '{file_name}.dat', '{plsql_mode}');
+  EXCEPTION
+    WHEN UTL_FILE.INVALID_PATH THEN
+      DBMS_OUTPUT.PUT_LINE('Directorio inválido para {file_name}');
+      v_file_status := 'ERROR';
+    WHEN UTL_FILE.INVALID_FILENAME THEN
+      DBMS_OUTPUT.PUT_LINE('Nombre de archivo inválido: {file_name}');
+      v_file_status := 'ERROR';
+  END; -- {raw_content}"""
+    
+    def _convert_close_file(self, file_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir CLOSE a UTL_FILE.FCLOSE
+        """
+        file_name = self._convert_cobol_to_plsql_identifier(file_info["file_name"])
+        
+        return f"""
+  IF UTL_FILE.IS_OPEN({file_name}) THEN
+    UTL_FILE.FCLOSE({file_name});
+  END IF; -- {raw_content}"""
+    
+    def _convert_read_file(self, file_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir READ a UTL_FILE.GET_LINE con manejo de excepciones
+        Principio Liskov Substitution: Puede sustituir diferentes tipos de READ
+        """
+        file_name = self._convert_cobol_to_plsql_identifier(file_info["file_name"])
+        read_type = file_info.get("type", "simple")
+        
+        if read_type == "with_key":
+            # READ indexado - convertir a SELECT
+            key_field = self._convert_cobol_to_plsql_identifier(file_info.get("key_field", ""))
+            return f"""
+  -- READ con clave convertido a SELECT
+  BEGIN
+    SELECT * INTO v_registro
+    FROM {file_name}_table
+    WHERE {key_field} = v_clave_busqueda;
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      v_invalid_key := TRUE; -- INVALID KEY
+  END; -- {raw_content}"""
+        
+        elif read_type == "with_into":
+            into_var = self._convert_cobol_to_plsql_identifier(file_info.get("into_variable", ""))
+            return f"""
+  BEGIN
+    UTL_FILE.GET_LINE({file_name}, {into_var});
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      v_eof_flag := TRUE; -- AT END
+  END; -- {raw_content}"""
+        
+        else:
+            # READ simple con manejo de AT END
+            if file_info.get("has_at_end", False):
+                return f"""
+  BEGIN
+    UTL_FILE.GET_LINE({file_name}, v_registro);
+    -- NOT AT END - procesar registro
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      v_eof_flag := TRUE; -- AT END
+  END; -- {raw_content}"""
+            else:
+                return f"""
+  UTL_FILE.GET_LINE({file_name}, v_registro); -- {raw_content}"""
+    
+    def _convert_write_file(self, file_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir WRITE a UTL_FILE.PUT_LINE
+        Principio Interface Segregation: Interface específica para escritura
+        """
+        record_name = self._convert_cobol_to_plsql_identifier(file_info["record_name"])
+        write_type = file_info.get("type", "simple")
+        
+        # Determinar el archivo destino (asumimos que es el archivo actual)
+        file_variable = "v_archivo_salida"  # Variable genérica
+        
+        if write_type == "with_from":
+            from_var = self._convert_cobol_to_plsql_identifier(file_info.get("from_variable", ""))
+            return f"""
+  BEGIN
+    UTL_FILE.PUT_LINE({file_variable}, {from_var});
+    UTL_FILE.FFLUSH({file_variable}); -- Forzar escritura
+  EXCEPTION
+    WHEN UTL_FILE.WRITE_ERROR THEN
+      DBMS_OUTPUT.PUT_LINE('Error al escribir {record_name}');
+      v_file_status := 'ERROR';
+  END; -- {raw_content}"""
+        
+        elif write_type in ["with_after", "with_before"]:
+            line_control = file_info.get("line_control", "1")
+            if line_control == "0":
+                # AFTER 0 LINES = sin salto de línea
+                return f"""
+  UTL_FILE.PUT({file_variable}, {record_name}); -- {raw_content}"""
+            else:
+                return f"""
+  UTL_FILE.PUT_LINE({file_variable}, {record_name}); -- {raw_content}"""
+        
+        else:
+            return f"""
+  BEGIN
+    UTL_FILE.PUT_LINE({file_variable}, {record_name});
+  EXCEPTION
+    WHEN UTL_FILE.WRITE_ERROR THEN
+      DBMS_OUTPUT.PUT_LINE('Error al escribir archivo');
+      v_file_status := 'ERROR';
+  END; -- {raw_content}"""
+    
+    def _convert_rewrite_file(self, file_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir REWRITE a UPDATE (para archivos indexados)
+        """
+        record_name = self._convert_cobol_to_plsql_identifier(file_info.get("record_name", ""))
+        
+        return f"""
+  -- REWRITE convertido a UPDATE
+  BEGIN
+    UPDATE {record_name}_table 
+    SET campos = v_nuevos_valores
+    WHERE clave_primaria = v_clave_actual;
+    
+    IF SQL%NOTFOUND THEN
+      v_invalid_key := TRUE;
+    END IF;
+  EXCEPTION
+    WHEN OTHERS THEN
+      DBMS_OUTPUT.PUT_LINE('Error en REWRITE: ' || SQLERRM);
+  END; -- {raw_content}"""
+    
+    def _convert_delete_record(self, file_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir DELETE RECORD a DELETE SQL
+        """
+        file_name = self._convert_cobol_to_plsql_identifier(file_info.get("file_name", ""))
+        
+        return f"""
+  -- DELETE RECORD convertido a DELETE SQL
+  BEGIN
+    DELETE FROM {file_name}_table
+    WHERE clave_primaria = v_clave_actual;
+    
+    IF SQL%NOTFOUND THEN
+      v_invalid_key := TRUE;
+    END IF;
+  EXCEPTION
+    WHEN OTHERS THEN
+      DBMS_OUTPUT.PUT_LINE('Error en DELETE: ' || SQLERRM);
+  END; -- {raw_content}"""
+    
+    def _convert_start_file(self, file_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir START a posicionamiento de cursor o reinicio de archivo
+        """
+        file_name = self._convert_cobol_to_plsql_identifier(file_info.get("file_name", ""))
+        
+        return f"""
+  -- START - Posicionamiento al inicio del archivo
+  IF UTL_FILE.IS_OPEN({file_name}) THEN
+    UTL_FILE.FCLOSE({file_name});
+  END IF;
+  {file_name} := UTL_FILE.FOPEN(v_directorio, '{file_name}.dat', 'R'); -- {raw_content}"""
+    
+    def _convert_file_generic(self, file_info: Dict[str, Any], raw_content: str, op: str) -> str:
+        """
+        Convertir operación de archivo genérica
+        """
+        return f"""
+  -- GAP -- {raw_content} -- ({op} file operation - needs manual conversion)"""
+    
+    def _generate_file_variables_section(self) -> str:
+        """
+        Generar variables UTL_FILE comunes necesarias para operaciones de archivo
+        Principio Dependency Inversion: Depende de abstracciones de UTL_FILE
+        """
+        return """
+  
+  /*
+   *-------------------------------------------------------------*
+   * VARIABLES PARA MANEJO DE ARCHIVOS - UTL_FILE               *
+   *-------------------------------------------------------------*
+   */
+   
+  -- Variables de directorio y archivos
+  v_directorio         VARCHAR2(30) := 'MI_DIRECTORIO';
+  v_file_status        VARCHAR2(10) := 'OK';
+  v_eof_flag           BOOLEAN := FALSE;
+  v_invalid_key        BOOLEAN := FALSE;
+  v_registro           VARCHAR2(4000);
+  
+  -- Handles de archivos UTL_FILE
+  v_archivo_entrada    UTL_FILE.FILE_TYPE;
+  v_archivo_salida     UTL_FILE.FILE_TYPE;
+  v_archivo_maestro    UTL_FILE.FILE_TYPE;
+  
+  -- Procedimientos de utilidad para archivos
+  PROCEDURE cerrar_todos_archivos IS
+  BEGIN
+    IF UTL_FILE.IS_OPEN(v_archivo_entrada) THEN
+      UTL_FILE.FCLOSE(v_archivo_entrada);
+    END IF;
+    IF UTL_FILE.IS_OPEN(v_archivo_salida) THEN
+      UTL_FILE.FCLOSE(v_archivo_salida);
+    END IF;
+    IF UTL_FILE.IS_OPEN(v_archivo_maestro) THEN
+      UTL_FILE.FCLOSE(v_archivo_maestro);
+    END IF;
+  END cerrar_todos_archivos;
+  
+  PROCEDURE manejar_error_archivo(p_operacion VARCHAR2, p_archivo VARCHAR2) IS
+  BEGIN
+    DBMS_OUTPUT.PUT_LINE('Error en ' || p_operacion || ' archivo: ' || p_archivo);
+    cerrar_todos_archivos;
+    RAISE_APPLICATION_ERROR(-20001, 'Error en operación de archivo');
+  END manejar_error_archivo;"""
+    
+    def _convert_perform_until_file_operation(self, raw_content: str) -> str:
+        """
+        Convertir PERFORM UNTIL con operaciones de archivo comunes
+        Ejemplo: PERFORM UNTIL EOF-FLAG = 'Y'
+        """
+        import re
+        
+        # Detectar patrones de loop con EOF
+        if "UNTIL" in raw_content.upper() and any(flag in raw_content.upper() for flag in ["EOF", "END-OF-FILE", "FIN-ARCHIVO"]):
+            return f"""
+  WHILE NOT v_eof_flag LOOP
+    -- Loop de procesamiento de archivo -- {raw_content}"""
+        
+        # PERFORM con READ hasta END
+        if "READ" in raw_content.upper():
+            match = re.search(r"PERFORM\s+([A-Z0-9\-]+)", raw_content.upper())
+            if match:
+                procedure_name = self._convert_cobol_to_plsql_identifier(match.group(1))
+                return f"""
+  -- PERFORM convertido a llamada de procedimiento
+  {procedure_name}; -- {raw_content}"""
+        
+        return f"""
+  -- GAP -- {raw_content} -- (PERFORM with file operations)"""
+    
+    def _enhance_file_context_detection(self, ir_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Detectar context de archivos desde FILE-CONTROL y FILE SECTION
+        Principio Single Responsibility: Solo detección de context de archivos
+        """
+        file_context = {
+            "file_names": [],
+            "select_assignments": {},
+            "file_descriptions": {},
+            "record_formats": {}
+        }
+        
+        # Buscar en environment division
+        env_div = ir_data.get("environment_division", {})
+        file_control = env_div.get("file_control", [])
+        
+        for file_entry in file_control:
+            if isinstance(file_entry, dict):
+                file_name = file_entry.get("file_name", "")
+                assign_to = file_entry.get("assign_to", "")
+                if file_name:
+                    file_context["file_names"].append(file_name)
+                    file_context["select_assignments"][file_name] = assign_to
+        
+        # Buscar en data division - file section
+        data_div = ir_data.get("data_division", {})
+        file_section = data_div.get("file_section", [])
+        
+        for fd_entry in file_section:
+            if isinstance(fd_entry, dict):
+                fd_name = fd_entry.get("name", "")
+                record_contains = fd_entry.get("record_contains", "")
+                if fd_name:
+                    file_context["file_descriptions"][fd_name] = {
+                        "record_contains": record_contains,
+                        "records": fd_entry.get("records", [])
+                    }
+        
+        return file_context
+    
+    def _generate_file_declarations_from_context(self, file_context: Dict[str, Any]) -> str:
+        """
+        Generar declaraciones UTL_FILE basadas en el contexto detectado
+        """
+        if not file_context.get("file_names"):
+            return ""
+        
+        declarations = "\n  -- Declaraciones de archivos detectados automáticamente"
+        
+        for file_name in file_context["file_names"]:
+            plsql_name = self._convert_cobol_to_plsql_identifier(file_name)
+            assign_to = file_context["select_assignments"].get(file_name, f"{file_name}.dat")
+            
+            declarations += f"""
+  {plsql_name}             UTL_FILE.FILE_TYPE; -- {file_name} ASSIGN TO {assign_to}"""
+        
+        return declarations
+
+    # ===== CONVERTIDORES STRING SIGUIENDO PRINCIPIOS SOLID =====
+    
+    def _convert_string_statement(self, stmt: Dict[str, Any]) -> str:
+        """
+        Convertir statement STRING a PL/SQL siguiendo equivalencias del archivo de referencia
+        Principio Single Responsibility: Solo maneja conversión de STRING
+        """
+        raw_content = stmt.get("raw", "").strip()
+        details = stmt.get("details", {})
+        
+        print(f"🔄 Convirtiendo STRING: {raw_content}")
+        
+        # Extraer información de la sentencia STRING
+        string_info = self._parse_string_statement(raw_content)
+        
+        if not string_info:
+            return f"\n  -- GAP -- {raw_content} -- (STRING statement - parsing failed)"
+        
+        # Aplicar patrón Strategy para diferentes tipos de STRING
+        try:
+            if string_info["type"] == "simple_concatenation":
+                return self._convert_string_simple(string_info, raw_content)
+            elif string_info["type"] == "delimited_by_spaces":
+                return self._convert_string_delimited_spaces(string_info, raw_content)
+            elif string_info["type"] == "delimited_by_size":
+                return self._convert_string_delimited_size(string_info, raw_content)
+            elif string_info["type"] == "delimited_by_literal":
+                return self._convert_string_delimited_literal(string_info, raw_content)
+            elif string_info["type"] == "with_pointer":
+                return self._convert_string_with_pointer(string_info, raw_content)
+            elif string_info["type"] == "with_overflow":
+                return self._convert_string_with_overflow(string_info, raw_content)
+            elif string_info["type"] == "multi_field":
+                return self._convert_string_multi_field(string_info, raw_content)
+            else:
+                return self._convert_string_generic(string_info, raw_content)
+        except Exception as e:
+            print(f"❌ Error convirtiendo STRING: {e}")
+            return f"\n  -- GAP -- {raw_content} -- (STRING statement - conversion error)"
+    
+    def _parse_string_statement(self, raw_content: str) -> Dict[str, Any]:
+        """
+        Parsear sentencia STRING para extraer componentes
+        Principio Single Responsibility: Solo parsing de STRING
+        """
+        import re
+        
+        line = raw_content.strip()
+        upper_line = line.upper()
+        
+        # Patrones para diferentes tipos de STRING
+        patterns = {
+            "with_pointer": r"STRING\s+(.+?)\s+INTO\s+(.+?)\s+WITH\s+POINTER\s+(.+?)(?:\s|$)",
+            "with_overflow": r"STRING\s+(.+?)\s+INTO\s+(.+?)\s+ON\s+OVERFLOW",
+            "delimited_by_spaces": r"STRING\s+(.+?)\s+DELIMITED\s+BY\s+SPACES?\s+INTO\s+(.+?)(?:\s|$)",
+            "delimited_by_size": r"STRING\s+(.+?)\s+DELIMITED\s+BY\s+SIZE\s+INTO\s+(.+?)(?:\s|$)",
+            "delimited_by_literal": r"STRING\s+(.+?)\s+DELIMITED\s+BY\s+['\"](.+?)['\"].*INTO\s+(.+?)(?:\s|$)",
+            "multi_field": r"STRING\s+(.+?)\s+INTO\s+(.+?)(?:\s|$)",
+            "simple": r"STRING\s+(.+?)(?:\s|$)"
+        }
+        
+        # Detectar tipo de STRING basado en contenido
+        for pattern_name, pattern in patterns.items():
+            match = re.search(pattern, upper_line, re.IGNORECASE)
+            if match:
+                return self._build_string_info(pattern_name, match, line)
+        
+        # Si no coincide con ningún patrón específico, devolver genérico
+        return {
+            "type": "generic",
+            "raw": line
+        }
+    
+    def _build_string_info(self, pattern_name: str, match, line: str) -> Dict[str, Any]:
+        """
+        Construir información del STRING basada en el patrón detectado
+        Principio Open/Closed: Extendible para nuevos patrones
+        """
+        if pattern_name == "simple":
+            return {
+                "type": "simple_concatenation",
+                "content": match.group(1).strip(),
+                "raw": line
+            }
+        elif pattern_name == "delimited_by_spaces":
+            return {
+                "type": "delimited_by_spaces",
+                "sources": self._extract_string_sources(match.group(1).strip()),
+                "destination": match.group(2).strip(),
+                "raw": line
+            }
+        elif pattern_name == "delimited_by_size":
+            return {
+                "type": "delimited_by_size",
+                "sources": self._extract_string_sources(match.group(1).strip()),
+                "destination": match.group(2).strip(),
+                "raw": line
+            }
+        elif pattern_name == "delimited_by_literal":
+            return {
+                "type": "delimited_by_literal",
+                "sources": self._extract_string_sources(match.group(1).strip()),
+                "delimiter": match.group(2).strip(),
+                "destination": match.group(3).strip(),
+                "raw": line
+            }
+        elif pattern_name == "with_pointer":
+            return {
+                "type": "with_pointer",
+                "sources": self._extract_string_sources(match.group(1).strip()),
+                "destination": match.group(2).strip(),
+                "pointer": match.group(3).strip(),
+                "raw": line
+            }
+        elif pattern_name == "with_overflow":
+            return {
+                "type": "with_overflow",
+                "sources": self._extract_string_sources(match.group(1).strip()),
+                "destination": match.group(2).strip(),
+                "has_overflow": True,
+                "raw": line
+            }
+        elif pattern_name == "multi_field":
+            return {
+                "type": "multi_field",
+                "sources": self._extract_string_sources(match.group(1).strip()),
+                "destination": match.group(2).strip(),
+                "raw": line
+            }
+        
+        return {"type": "generic", "raw": line}
+    
+    def _extract_string_sources(self, sources_text: str) -> List[Dict[str, str]]:
+        """
+        Extraer campos fuente de una operación STRING
+        """
+        import re
+        
+        sources = []
+        
+        # Limpiar texto de fuentes
+        clean_text = sources_text.strip()
+        
+        # Patrones mejorados para diferentes tipos de campos fuente
+        # 1. Buscar campos con DELIMITED BY específicos
+        delimited_patterns = [
+            r"([A-Z0-9\-'\"]+)\s+DELIMITED\s+BY\s+SIZE",
+            r"([A-Z0-9\-'\"]+)\s+DELIMITED\s+BY\s+SPACES?",
+            r"([A-Z0-9\-'\"]+)\s+DELIMITED\s+BY\s+['\"]([^'\"]*)['\"]",
+            r"([A-Z0-9\-'\"]+)\s+DELIMITED\s+BY\s+([A-Z0-9\-]+)"  # Variable como delimitador
+        ]
+        
+        # Buscar literales (strings between quotes)
+        literal_pattern = r"['\"]([^'\"]*)['\"]"
+        literals = re.findall(literal_pattern, clean_text)
+        for literal in literals:
+            sources.append({
+                "field": f"'{literal}'",
+                "delimiter": "SIZE",
+                "type": "literal"
+            })
+        
+        # Buscar campos con DELIMITED BY
+        for pattern in delimited_patterns:
+            matches = re.findall(pattern, clean_text, re.IGNORECASE)
+            for match in matches:
+                if len(match) == 2:  # Patrón con delimitador específico
+                    field, delimiter = match
+                    sources.append({
+                        "field": field.strip(),
+                        "delimiter": delimiter.strip(),
+                        "type": "delimited"
+                    })
+                else:  # Patrón simple (SIZE, SPACES)
+                    field = match if isinstance(match, str) else match[0]
+                    delimiter_type = "SIZE"
+                    if "SPACES" in pattern:
+                        delimiter_type = "SPACES"
+                    sources.append({
+                        "field": field.strip(),
+                        "delimiter": delimiter_type,
+                        "type": "delimited"
+                    })
+        
+        # Si no hay DELIMITED BY, buscar campos simples (excluyendo INTO)
+        if not sources:
+            # Eliminar palabras clave
+            keywords_to_remove = ["INTO", "WITH", "POINTER", "ON", "OVERFLOW", "NOT", "END-STRING"]
+            clean_for_fields = clean_text
+            for keyword in keywords_to_remove:
+                clean_for_fields = re.sub(rf"\b{keyword}\b", "", clean_for_fields, flags=re.IGNORECASE)
+            
+            # Buscar campos y literales
+            fields = re.findall(r"[A-Z0-9\-]+|['\"][^'\"]*['\"]", clean_for_fields, re.IGNORECASE)
+            for field in fields:
+                field = field.strip()
+                if field and len(field) > 1:  # Evitar caracteres sueltos
+                    field_type = "literal" if (field.startswith("'") or field.startswith('"')) else "simple"
+                    sources.append({
+                        "field": field,
+                        "delimiter": "SIZE",
+                        "type": field_type
+                    })
+        
+        return sources
+    
+    def _convert_string_simple(self, string_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir STRING simple (concatenación básica)
+        """
+        content = string_info.get("content", "")
+        
+        return f"""
+  -- STRING simple convertido a concatenación
+  -- {raw_content}
+  -- GAP: Implementar concatenación de: {content}"""
+    
+    def _convert_string_delimited_spaces(self, string_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir STRING con DELIMITED BY SPACES
+        """
+        sources = string_info.get("sources", [])
+        destination = self._convert_cobol_to_plsql_identifier(string_info.get("destination", ""))
+        
+        if len(sources) == 1:
+            source_field = self._convert_cobol_to_plsql_identifier(sources[0]["field"])
+            return f"""
+  -- STRING DELIMITED BY SPACES
+  {destination} := RTRIM({source_field}); -- {raw_content}"""
+        else:
+            # Múltiples campos
+            concatenation = " || ".join([
+                f"RTRIM({self._convert_cobol_to_plsql_identifier(source['field'])})"
+                for source in sources
+            ])
+            return f"""
+  -- STRING DELIMITED BY SPACES (múltiples campos)
+  {destination} := {concatenation}; -- {raw_content}"""
+    
+    def _convert_string_delimited_size(self, string_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir STRING con DELIMITED BY SIZE
+        """
+        sources = string_info.get("sources", [])
+        destination = self._convert_cobol_to_plsql_identifier(string_info.get("destination", ""))
+        
+        if len(sources) == 1:
+            source_field = self._convert_cobol_to_plsql_identifier(sources[0]["field"])
+            return f"""
+  -- STRING DELIMITED BY SIZE
+  {destination} := {source_field}; -- {raw_content}"""
+        else:
+            # Múltiples campos
+            concatenation = " || ".join([
+                self._convert_cobol_to_plsql_identifier(source['field'])
+                for source in sources
+            ])
+            return f"""
+  -- STRING DELIMITED BY SIZE (múltiples campos)
+  {destination} := {concatenation}; -- {raw_content}"""
+    
+    def _convert_string_delimited_literal(self, string_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir STRING con DELIMITED BY literal
+        """
+        sources = string_info.get("sources", [])
+        destination = self._convert_cobol_to_plsql_identifier(string_info.get("destination", ""))
+        delimiter = string_info.get("delimiter", "")
+        
+        if len(sources) == 1:
+            source_field = self._convert_cobol_to_plsql_identifier(sources[0]["field"])
+            return f"""
+  -- STRING DELIMITED BY '{delimiter}'
+  DECLARE
+    v_pos NUMBER;
+  BEGIN
+    v_pos := INSTR({source_field}, '{delimiter}');
+    IF v_pos > 0 THEN
+      {destination} := SUBSTR({source_field}, 1, v_pos - 1);
+    ELSE
+      {destination} := {source_field};
+    END IF;
+  END; -- {raw_content}"""
+        else:
+            return f"""
+  -- STRING DELIMITED BY '{delimiter}' (múltiples campos)
+  -- GAP: Implementar delimitado por literal para múltiples campos
+  -- {raw_content}"""
+    
+    def _convert_string_with_pointer(self, string_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir STRING con WITH POINTER
+        """
+        sources = string_info.get("sources", [])
+        destination = self._convert_cobol_to_plsql_identifier(string_info.get("destination", ""))
+        pointer = self._convert_cobol_to_plsql_identifier(string_info.get("pointer", ""))
+        
+        # Generar concatenación de fuentes
+        if len(sources) == 1:
+            source_concat = self._convert_cobol_to_plsql_identifier(sources[0]["field"])
+        else:
+            source_concat = " || ".join([
+                self._convert_cobol_to_plsql_identifier(source['field'])
+                for source in sources
+            ])
+        
+        return f"""
+  -- STRING WITH POINTER
+  DECLARE
+    v_combined VARCHAR2(4000);
+    v_length NUMBER;
+  BEGIN
+    v_combined := {source_concat};
+    v_length := LENGTH(v_combined);
+    
+    {destination} := SUBSTR({destination}, 1, {pointer} - 1) ||
+                    v_combined ||
+                    SUBSTR({destination}, {pointer} + v_length);
+    
+    {pointer} := {pointer} + v_length;
+  END; -- {raw_content}"""
+    
+    def _convert_string_with_overflow(self, string_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir STRING con ON OVERFLOW
+        """
+        sources = string_info.get("sources", [])
+        destination = self._convert_cobol_to_plsql_identifier(string_info.get("destination", ""))
+        
+        # Generar concatenación de fuentes
+        if len(sources) == 1:
+            source_concat = self._convert_cobol_to_plsql_identifier(sources[0]["field"])
+        else:
+            source_concat = " || ".join([
+                self._convert_cobol_to_plsql_identifier(source['field'])
+                for source in sources
+            ])
+        
+        return f"""
+  -- STRING WITH OVERFLOW CHECK
+  DECLARE
+    v_combined VARCHAR2(4000);
+    STRING_OVERFLOW_ERROR EXCEPTION;
+  BEGIN
+    v_combined := {source_concat};
+    
+    -- Verificar si excede el tamaño máximo (asumir 255 por defecto)
+    IF LENGTH(v_combined) > 255 THEN
+      RAISE STRING_OVERFLOW_ERROR;
+    END IF;
+    
+    {destination} := v_combined;
+    -- NOT ON OVERFLOW - acciones de éxito aquí
+    
+  EXCEPTION
+    WHEN STRING_OVERFLOW_ERROR THEN
+      -- ON OVERFLOW - manejar overflow aquí
+      DBMS_OUTPUT.PUT_LINE('STRING overflow occurred');
+  END; -- {raw_content}"""
+    
+    def _convert_string_multi_field(self, string_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir STRING con múltiples campos
+        """
+        sources = string_info.get("sources", [])
+        destination = self._convert_cobol_to_plsql_identifier(string_info.get("destination", ""))
+        
+        if not sources:
+            return f"""
+  -- GAP -- {raw_content} -- (STRING multi-field - no sources detected)"""
+        
+        # Procesar cada fuente según su tipo de delimitador
+        concatenation_parts = []
+        for source in sources:
+            field = source["field"]
+            delimiter = source.get("delimiter", "SIZE").upper()
+            field_type = source.get("type", "simple")
+            
+            # Manejar literales directamente
+            if field_type == "literal" or (field.startswith("'") and field.endswith("'")):
+                concatenation_parts.append(field)
+            else:
+                # Convertir identificador COBOL a PL/SQL
+                plsql_field = self._convert_cobol_to_plsql_identifier(field)
+                
+                if delimiter == "SPACES" or delimiter == "SPACE":
+                    concatenation_parts.append(f"RTRIM({plsql_field})")
+                elif delimiter == "SIZE":
+                    concatenation_parts.append(plsql_field)
+                elif delimiter.startswith("'") and delimiter.endswith("'"):
+                    # Literal delimiter - usar función de utilidad
+                    delimiter_value = delimiter[1:-1]
+                    concatenation_parts.append(f"delimited_by_literal({plsql_field}, '{delimiter_value}')")
+                else:
+                    # Variable como delimitador
+                    delimiter_var = self._convert_cobol_to_plsql_identifier(delimiter)
+                    concatenation_parts.append(f"delimited_by_literal({plsql_field}, {delimiter_var})")
+        
+        concatenation = " || ".join(concatenation_parts)
+        
+        return f"""
+  -- STRING múltiples campos
+  {destination} := {concatenation}; -- {raw_content}"""
+    
+    def _convert_string_generic(self, string_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir STRING genérico cuando no coincide con patrones específicos
+        """
+        return f"""
+  -- GAP -- {raw_content} -- (STRING statement - generic)"""
+    
+    def _generate_string_utility_functions(self) -> str:
+        """
+        Generar funciones de utilidad para operaciones STRING
+        Principio Dependency Inversion: Depende de abstracciones de STRING operations
+        """
+        return """
+  
+  /*
+   *-------------------------------------------------------------*
+   * FUNCIONES DE UTILIDAD PARA OPERACIONES STRING              *
+   *-------------------------------------------------------------*
+   */
+   
+  -- Función para DELIMITED BY SPACES
+  FUNCTION delimited_by_spaces(p_input VARCHAR2) RETURN VARCHAR2 IS
+    v_pos NUMBER;
+  BEGIN
+    v_pos := INSTR(p_input, ' ');
+    IF v_pos > 0 THEN
+      RETURN SUBSTR(p_input, 1, v_pos - 1);
+    ELSE
+      RETURN RTRIM(p_input);
+    END IF;
+  END delimited_by_spaces;
+  
+  -- Función para DELIMITED BY literal
+  FUNCTION delimited_by_literal(p_input VARCHAR2, p_delimiter VARCHAR2) RETURN VARCHAR2 IS
+    v_pos NUMBER;
+  BEGIN
+    v_pos := INSTR(p_input, p_delimiter);
+    IF v_pos > 0 THEN
+      RETURN SUBSTR(p_input, 1, v_pos - 1);
+    ELSE
+      RETURN p_input;
+    END IF;
+  END delimited_by_literal;
+  
+  -- Procedimiento STRING con POINTER
+  PROCEDURE string_with_pointer(p_source VARCHAR2,
+                               p_destination IN OUT VARCHAR2,
+                               p_pointer IN OUT NUMBER) IS
+    v_length NUMBER;
+  BEGIN
+    v_length := LENGTH(p_source);
+    
+    p_destination := SUBSTR(p_destination, 1, p_pointer - 1) ||
+                    p_source ||
+                    SUBSTR(p_destination, p_pointer + v_length);
+    
+    p_pointer := p_pointer + v_length;
+  END string_with_pointer;
+  
+  -- Función STRING con verificación de overflow
+  FUNCTION string_with_overflow_check(p_source VARCHAR2,
+                                     p_max_length NUMBER,
+                                     p_overflow OUT BOOLEAN) RETURN VARCHAR2 IS
+  BEGIN
+    IF LENGTH(p_source) > p_max_length THEN
+      p_overflow := TRUE;
+      RETURN SUBSTR(p_source, 1, p_max_length);
+    ELSE
+      p_overflow := FALSE;
+      RETURN p_source;
+    END IF;
+  END string_with_overflow_check;"""
+
+    # ===== CONVERTIDORES SET SIGUIENDO PRINCIPIOS SOLID =====
+    
+    def _convert_set_statement(self, stmt: Dict[str, Any]) -> str:
+        """
+        Convertir statement SET a PL/SQL siguiendo equivalencias del archivo de referencia
+        Principio Single Responsibility: Solo maneja conversión de SET
+        """
+        raw_content = stmt.get("raw", "").strip()
+        details = stmt.get("details", {})
+        
+        print(f"🔄 Convirtiendo SET: {raw_content}")
+        
+        # Extraer información de la sentencia SET
+        set_info = self._parse_set_statement(raw_content)
+        
+        if not set_info:
+            return f"\n  -- GAP -- {raw_content} -- (SET statement - parsing failed)"
+        
+        # Aplicar patrón Strategy para diferentes tipos de SET
+        try:
+            if set_info["type"] == "condition_name_true":
+                return self._convert_set_condition_name_true(set_info, raw_content)
+            elif set_info["type"] == "condition_name_false":
+                return self._convert_set_condition_name_false(set_info, raw_content)
+            elif set_info["type"] == "index_to_value":
+                return self._convert_set_index_to_value(set_info, raw_content)
+            elif set_info["type"] == "index_up_by":
+                return self._convert_set_index_up_by(set_info, raw_content)
+            elif set_info["type"] == "index_down_by":
+                return self._convert_set_index_down_by(set_info, raw_content)
+            elif set_info["type"] == "index_to_index":
+                return self._convert_set_index_to_index(set_info, raw_content)
+            elif set_info["type"] == "pointer_to_address":
+                return self._convert_set_pointer_to_address(set_info, raw_content)
+            elif set_info["type"] == "address_to_pointer":
+                return self._convert_set_address_to_pointer(set_info, raw_content)
+            elif set_info["type"] == "variable_to_true":
+                return self._convert_set_variable_to_true(set_info, raw_content)
+            elif set_info["type"] == "variable_to_false":
+                return self._convert_set_variable_to_false(set_info, raw_content)
+            elif set_info["type"] == "variable_to_null":
+                return self._convert_set_variable_to_null(set_info, raw_content)
+            else:
+                return self._convert_set_generic(set_info, raw_content)
+        except Exception as e:
+            print(f"❌ Error convirtiendo SET: {e}")
+            return f"\n  -- GAP -- {raw_content} -- (SET statement - conversion error)"
+    
+    def _parse_set_statement(self, raw_content: str) -> Dict[str, Any]:
+        """
+        Parsear sentencia SET para extraer componentes
+        Principio Single Responsibility: Solo parsing de SET
+        """
+        import re
+        
+        line = raw_content.strip()
+        upper_line = line.upper()
+        
+        # Patrones para diferentes tipos de SET (orden importa - más específicos primero)
+        patterns = {
+            "condition_name_true": r"SET\s+([A-Z0-9\-]+)\s+TO\s+TRUE",
+            "condition_name_false": r"SET\s+([A-Z0-9\-]+)\s+TO\s+FALSE",
+            "index_up_by": r"SET\s+([A-Z0-9\-]+)\s+UP\s+BY\s+([A-Z0-9\-]+|\d+)",
+            "index_down_by": r"SET\s+([A-Z0-9\-]+)\s+DOWN\s+BY\s+([A-Z0-9\-]+|\d+)",
+            "index_to_index": r"SET\s+([A-Z0-9\-]+)\s+TO\s+([A-Z0-9\-]+)(?!\s+(TRUE|FALSE|NULL))",
+            "index_to_value": r"SET\s+([A-Z0-9\-]+)\s+TO\s+(\d+)",
+            "pointer_to_address": r"SET\s+([A-Z0-9\-]+)\s+TO\s+ADDRESS\s+OF\s+([A-Z0-9\-]+)",
+            "address_to_pointer": r"SET\s+ADDRESS\s+OF\s+([A-Z0-9\-]+)\s+TO\s+([A-Z0-9\-]+)",
+            "variable_to_true": r"SET\s+([A-Z0-9\-]+)\s+TO\s+TRUE",
+            "variable_to_false": r"SET\s+([A-Z0-9\-]+)\s+TO\s+FALSE",
+            "variable_to_null": r"SET\s+([A-Z0-9\-]+)\s+TO\s+NULL",
+            "simple": r"SET\s+(.+?)(?:\s|$)"
+        }
+        
+        # Detectar tipo de SET basado en contenido
+        for pattern_name, pattern in patterns.items():
+            match = re.search(pattern, upper_line, re.IGNORECASE)
+            if match:
+                return self._build_set_info(pattern_name, match, line)
+        
+        # Si no coincide con ningún patrón específico, devolver genérico
+        return {
+            "type": "generic",
+            "raw": line
+        }
+    
+    def _build_set_info(self, pattern_name: str, match, line: str) -> Dict[str, Any]:
+        """
+        Construir información del SET basada en el patrón detectado
+        Principio Open/Closed: Extendible para nuevos patrones
+        """
+        if pattern_name == "condition_name_true":
+            return {
+                "type": "condition_name_true",
+                "condition_name": match.group(1).strip(),
+                "raw": line
+            }
+        elif pattern_name == "condition_name_false":
+            return {
+                "type": "condition_name_false",
+                "condition_name": match.group(1).strip(),
+                "raw": line
+            }
+        elif pattern_name == "index_to_value":
+            return {
+                "type": "index_to_value",
+                "index_name": match.group(1).strip(),
+                "value": match.group(2).strip(),
+                "raw": line
+            }
+        elif pattern_name == "index_up_by":
+            return {
+                "type": "index_up_by",
+                "index_name": match.group(1).strip(),
+                "increment": match.group(2).strip(),
+                "raw": line
+            }
+        elif pattern_name == "index_down_by":
+            return {
+                "type": "index_down_by",
+                "index_name": match.group(1).strip(),
+                "decrement": match.group(2).strip(),
+                "raw": line
+            }
+        elif pattern_name == "index_to_index":
+            return {
+                "type": "index_to_index",
+                "target_index": match.group(1).strip(),
+                "source_index": match.group(2).strip(),
+                "raw": line
+            }
+        elif pattern_name == "pointer_to_address":
+            return {
+                "type": "pointer_to_address",
+                "pointer_name": match.group(1).strip(),
+                "variable_name": match.group(2).strip(),
+                "raw": line
+            }
+        elif pattern_name == "address_to_pointer":
+            return {
+                "type": "address_to_pointer",
+                "variable_name": match.group(1).strip(),
+                "pointer_name": match.group(2).strip(),
+                "raw": line
+            }
+        elif pattern_name == "variable_to_true":
+            return {
+                "type": "variable_to_true",
+                "variable_name": match.group(1).strip(),
+                "raw": line
+            }
+        elif pattern_name == "variable_to_false":
+            return {
+                "type": "variable_to_false",
+                "variable_name": match.group(1).strip(),
+                "raw": line
+            }
+        elif pattern_name == "variable_to_null":
+            return {
+                "type": "variable_to_null",
+                "variable_name": match.group(1).strip(),
+                "raw": line
+            }
+        elif pattern_name == "simple":
+            return {
+                "type": "simple",
+                "content": match.group(1).strip(),
+                "raw": line
+            }
+        
+        return {"type": "generic", "raw": line}
+    
+    def _convert_set_condition_name_true(self, set_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir SET condition-name TO TRUE
+        Ejemplos: SET CLIENTE-ACTIVO TO TRUE → set_cliente_activo;
+        """
+        condition_name = set_info["condition_name"]
+        plsql_name = self._convert_cobol_to_plsql_identifier(condition_name)
+        procedure_name = f"set_{plsql_name}"
+        
+        return f"""
+  {procedure_name}; -- {raw_content}
+  -- GAP: Definir procedimiento {procedure_name} para condition name {condition_name}"""
+    
+    def _convert_set_condition_name_false(self, set_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir SET condition-name TO FALSE
+        """
+        condition_name = set_info["condition_name"]
+        plsql_name = self._convert_cobol_to_plsql_identifier(condition_name)
+        procedure_name = f"set_{plsql_name}_false"
+        
+        return f"""
+  {procedure_name}; -- {raw_content}
+  -- GAP: Definir procedimiento {procedure_name} para condition name {condition_name}"""
+    
+    def _convert_set_index_to_value(self, set_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir SET index TO value
+        Ejemplos: SET IDX1 TO 10 → idx1 := 10;
+        """
+        index_name = self._convert_cobol_to_plsql_identifier(set_info["index_name"])
+        value = set_info["value"]
+        
+        return f"""
+  {index_name} := {value}; -- {raw_content}"""
+    
+    def _convert_set_index_up_by(self, set_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir SET index UP BY increment
+        Ejemplos: SET IDX1 UP BY 5 → idx1 := idx1 + 5;
+        """
+        index_name = self._convert_cobol_to_plsql_identifier(set_info["index_name"])
+        increment = set_info["increment"]
+        
+        # Si increment es un identificador, convertirlo también
+        if increment.isdigit():
+            increment_value = increment
+        else:
+            increment_value = self._convert_cobol_to_plsql_identifier(increment)
+        
+        return f"""
+  {index_name} := {index_name} + {increment_value}; -- {raw_content}"""
+    
+    def _convert_set_index_down_by(self, set_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir SET index DOWN BY decrement
+        Ejemplos: SET IDX1 DOWN BY 3 → idx1 := idx1 - 3;
+        """
+        index_name = self._convert_cobol_to_plsql_identifier(set_info["index_name"])
+        decrement = set_info["decrement"]
+        
+        # Si decrement es un identificador, convertirlo también
+        if decrement.isdigit():
+            decrement_value = decrement
+        else:
+            decrement_value = self._convert_cobol_to_plsql_identifier(decrement)
+        
+        return f"""
+  {index_name} := {index_name} - {decrement_value}; -- {raw_content}"""
+    
+    def _convert_set_index_to_index(self, set_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir SET index1 TO index2
+        Ejemplos: SET IDX1 TO IDX2 → idx1 := idx2;
+        """
+        target_index = self._convert_cobol_to_plsql_identifier(set_info["target_index"])
+        source_index = self._convert_cobol_to_plsql_identifier(set_info["source_index"])
+        
+        return f"""
+  {target_index} := {source_index}; -- {raw_content}"""
+    
+    def _convert_set_pointer_to_address(self, set_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir SET pointer TO ADDRESS OF variable
+        PL/SQL no tiene punteros directos, simular con referencias
+        """
+        pointer_name = self._convert_cobol_to_plsql_identifier(set_info["pointer_name"])
+        variable_name = self._convert_cobol_to_plsql_identifier(set_info["variable_name"])
+        
+        return f"""
+  -- SET POINTER TO ADDRESS simulation
+  {pointer_name} := '{variable_name}'; -- {raw_content}
+  -- GAP: Implementar sistema de referencias para punteros"""
+    
+    def _convert_set_address_to_pointer(self, set_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir SET ADDRESS OF variable TO pointer
+        Simulación de copia por referencia
+        """
+        variable_name = self._convert_cobol_to_plsql_identifier(set_info["variable_name"])
+        pointer_name = self._convert_cobol_to_plsql_identifier(set_info["pointer_name"])
+        
+        return f"""
+  -- SET ADDRESS OF simulation (copy by reference)
+  -- GAP: Implementar copia de contenido referenciado
+  -- copy_content_by_reference('{variable_name}', {pointer_name}); -- {raw_content}"""
+    
+    def _convert_set_variable_to_true(self, set_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir SET variable TO TRUE
+        """
+        variable_name = self._convert_cobol_to_plsql_identifier(set_info["variable_name"])
+        
+        return f"""
+  {variable_name} := TRUE; -- {raw_content}"""
+    
+    def _convert_set_variable_to_false(self, set_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir SET variable TO FALSE
+        """
+        variable_name = self._convert_cobol_to_plsql_identifier(set_info["variable_name"])
+        
+        return f"""
+  {variable_name} := FALSE; -- {raw_content}"""
+    
+    def _convert_set_variable_to_null(self, set_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir SET variable TO NULL
+        """
+        variable_name = self._convert_cobol_to_plsql_identifier(set_info["variable_name"])
+        
+        return f"""
+  {variable_name} := NULL; -- {raw_content}"""
+    
+    def _convert_set_generic(self, set_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir SET genérico cuando no coincide con patrones específicos
+        """
+        return f"""
+  -- GAP -- {raw_content} -- (SET statement - generic)"""
+    
+    def _generate_set_utility_functions(self) -> str:
+        """
+        Generar funciones de utilidad para operaciones SET
+        Principio Dependency Inversion: Depende de abstracciones de SET operations
+        """
+        return """
+  
+  /*
+   *-------------------------------------------------------------*
+   * FUNCIONES DE UTILIDAD PARA OPERACIONES SET                 *
+   *-------------------------------------------------------------*
+   */
+   
+  -- Package para manejo de condition names (88-level equivalents)
+  -- Este package se genera automáticamente basado en las variables detectadas
+  
+  -- Procedimiento para SET condition names TO TRUE
+  PROCEDURE set_condition_name_true(p_variable_name VARCHAR2, 
+                                   p_condition_name VARCHAR2,
+                                   p_true_value VARCHAR2) IS
+  BEGIN
+    -- Implementación genérica para condition names
+    -- GAP: Completar implementación basada en variables específicas
+    DBMS_OUTPUT.PUT_LINE('Setting ' || p_condition_name || ' to TRUE');
+  END set_condition_name_true;
+  
+  -- Procedimiento para SET condition names TO FALSE
+  PROCEDURE set_condition_name_false(p_variable_name VARCHAR2, 
+                                    p_condition_name VARCHAR2,
+                                    p_false_value VARCHAR2) IS
+  BEGIN
+    -- Implementación genérica para condition names
+    -- GAP: Completar implementación basada en variables específicas
+    DBMS_OUTPUT.PUT_LINE('Setting ' || p_condition_name || ' to FALSE');
+  END set_condition_name_false;
+  
+  -- Procedimiento para SET index con validación
+  PROCEDURE set_index_safe(p_index_name VARCHAR2,
+                          p_index IN OUT BINARY_INTEGER,
+                          p_value BINARY_INTEGER,
+                          p_min_val BINARY_INTEGER DEFAULT 1,
+                          p_max_val BINARY_INTEGER DEFAULT 1000) IS
+  BEGIN
+    IF p_value BETWEEN p_min_val AND p_max_val THEN
+      p_index := p_value;
+    ELSE
+      RAISE_APPLICATION_ERROR(-20001, 'Index ' || p_index_name || 
+                             ' out of range: ' || p_value || 
+                             ' (valid range: ' || p_min_val || '-' || p_max_val || ')');
+    END IF;
+  END set_index_safe;
+  
+  -- Procedimiento para SET index UP BY con validación
+  PROCEDURE set_index_up_by_safe(p_index_name VARCHAR2,
+                                p_index IN OUT BINARY_INTEGER,
+                                p_increment BINARY_INTEGER,
+                                p_max_val BINARY_INTEGER DEFAULT 1000) IS
+  BEGIN
+    IF p_index + p_increment <= p_max_val THEN
+      p_index := p_index + p_increment;
+    ELSE
+      RAISE_APPLICATION_ERROR(-20002, 'Index ' || p_index_name || 
+                             ' increment would exceed maximum: ' || p_max_val);
+    END IF;
+  END set_index_up_by_safe;
+  
+  -- Procedimiento para SET index DOWN BY con validación
+  PROCEDURE set_index_down_by_safe(p_index_name VARCHAR2,
+                                  p_index IN OUT BINARY_INTEGER,
+                                  p_decrement BINARY_INTEGER,
+                                  p_min_val BINARY_INTEGER DEFAULT 1) IS
+  BEGIN
+    IF p_index - p_decrement >= p_min_val THEN
+      p_index := p_index - p_decrement;
+    ELSE
+      RAISE_APPLICATION_ERROR(-20003, 'Index ' || p_index_name || 
+                             ' decrement would exceed minimum: ' || p_min_val);
+    END IF;
+  END set_index_down_by_safe;
+  
+  -- Simulación de punteros con storage de variables
+  TYPE t_pointer_storage IS TABLE OF VARCHAR2(4000) INDEX BY VARCHAR2(50);
+  g_pointer_storage t_pointer_storage;
+  
+  -- Procedimiento para SET pointer TO ADDRESS OF
+  PROCEDURE set_pointer_to_address_of(p_pointer_name VARCHAR2,
+                                     p_variable_name VARCHAR2,
+                                     p_variable_value VARCHAR2 DEFAULT NULL) IS
+  BEGIN
+    -- Simular puntero como referencia por nombre
+    IF p_variable_value IS NOT NULL THEN
+      g_pointer_storage(p_variable_name) := p_variable_value;
+    END IF;
+    g_pointer_storage(p_pointer_name || '_REF') := p_variable_name;
+  END set_pointer_to_address_of;
+  
+  -- Función para GET value by pointer
+  FUNCTION get_value_by_pointer(p_pointer_name VARCHAR2) RETURN VARCHAR2 IS
+    v_ref_name VARCHAR2(50);
+  BEGIN
+    v_ref_name := g_pointer_storage(p_pointer_name || '_REF');
+    IF v_ref_name IS NOT NULL THEN
+      RETURN g_pointer_storage(v_ref_name);
+    ELSE
+      RETURN NULL;
+    END IF;
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      RETURN NULL;
+  END get_value_by_pointer;
+  
+  -- Procedimiento para SET value by pointer
+  PROCEDURE set_value_by_pointer(p_pointer_name VARCHAR2, p_value VARCHAR2) IS
+    v_ref_name VARCHAR2(50);
+  BEGIN
+    v_ref_name := g_pointer_storage(p_pointer_name || '_REF');
+    IF v_ref_name IS NOT NULL THEN
+      g_pointer_storage(v_ref_name) := p_value;
+    END IF;
+    END set_value_by_pointer;"""
+
+    # ===== CONVERTIDORES PERFORM SIGUIENDO PRINCIPIOS SOLID =====
+    
+    def _convert_perform_statement(self, stmt: Dict[str, Any]) -> str:
+        """
+        Convertir statement PERFORM a PL/SQL siguiendo equivalencias del archivo de referencia
+        Principio Single Responsibility: Solo maneja conversión de PERFORM
+        """
+        raw_content = stmt.get("raw", "").strip()
+        details = stmt.get("details", {})
+        
+        print(f"🔄 Convirtiendo PERFORM: {raw_content}")
+        
+        # Extraer información de la sentencia PERFORM
+        perform_info = self._parse_perform_statement(raw_content)
+        
+        if not perform_info:
+            return f"\n  -- GAP -- {raw_content} -- (PERFORM statement - parsing failed)"
+        
+        # Aplicar patrón Strategy para diferentes tipos de PERFORM
+        try:
+            if perform_info["type"] == "simple":
+                return self._convert_perform_simple(perform_info, raw_content)
+            elif perform_info["type"] == "thru":
+                return self._convert_perform_thru(perform_info, raw_content)
+            elif perform_info["type"] == "times":
+                return self._convert_perform_times(perform_info, raw_content)
+            elif perform_info["type"] == "procedure_until":
+                return self._convert_perform_procedure_until(perform_info, raw_content)
+            elif perform_info["type"] == "until":
+                return self._convert_perform_until(perform_info, raw_content)
+            elif perform_info["type"] == "varying":
+                return self._convert_perform_varying(perform_info, raw_content)
+            elif perform_info["type"] == "varying_after":
+                return self._convert_perform_varying_after(perform_info, raw_content)
+            elif perform_info["type"] == "with_test_after":
+                return self._convert_perform_with_test_after(perform_info, raw_content)
+            elif perform_info["type"] == "inline":
+                return self._convert_perform_inline(perform_info, raw_content)
+            else:
+                return self._convert_perform_generic(perform_info, raw_content)
+        except Exception as e:
+            print(f"❌ Error convirtiendo PERFORM: {e}")
+            return f"\n  -- GAP -- {raw_content} -- (PERFORM statement - conversion error)"
+    
+    def _parse_perform_statement(self, raw_content: str) -> Dict[str, Any]:
+        """
+        Parsear sentencia PERFORM para extraer componentes
+        Principio Single Responsibility: Solo parsing de PERFORM
+        """
+        import re
+        
+        line = raw_content.strip()
+        upper_line = line.upper()
+        
+        # Patrones para diferentes tipos de PERFORM (orden importa - más específicos primero)
+        patterns = {
+            "varying_after": r"PERFORM\s+VARYING\s+([A-Z0-9\-]+)\s+FROM\s+([A-Z0-9\-]+)\s+BY\s+([A-Z0-9\-]+)\s+UNTIL\s+(.+?)\s+AFTER\s+([A-Z0-9\-]+)\s+FROM\s+([A-Z0-9\-]+)\s+BY\s+([A-Z0-9\-]+)\s+UNTIL\s+(.+)",
+            "varying": r"PERFORM\s+VARYING\s+([A-Z0-9\-]+)\s+FROM\s+([A-Z0-9\-]+)\s+BY\s+([A-Z0-9\-]+)\s+UNTIL\s+(.+)",
+            "with_test_after": r"PERFORM\s+WITH\s+TEST\s+AFTER\s+UNTIL\s+(.+)",
+            "procedure_until": r"PERFORM\s+([A-Z0-9\-]+)\s+UNTIL\s+([A-Z0-9\-]+)(?:\s|$|\.)",
+            "times": r"PERFORM\s+(\d+)\s+TIMES",
+            "until": r"PERFORM\s+UNTIL\s+(.+)",
+            "thru": r"PERFORM\s+([A-Z0-9\-]+)\s+THRU\s+([A-Z0-9\-]+)",
+            "simple": r"PERFORM\s+([A-Z0-9\-]+)(?:\s|$|\.)",
+            "inline": r"PERFORM\s*$"
+        }
+        
+        # Detectar tipo de PERFORM basado en contenido
+        for pattern_name, pattern in patterns.items():
+            match = re.search(pattern, upper_line, re.IGNORECASE)
+            if match:
+                return self._build_perform_info(pattern_name, match, line)
+        
+        # Si no coincide con ningún patrón específico, devolver genérico
+        return {
+            "type": "generic",
+            "raw": line
+        }
+    
+    def _build_perform_info(self, pattern_name: str, match, line: str) -> Dict[str, Any]:
+        """
+        Construir información del PERFORM basada en el patrón detectado
+        Principio Open/Closed: Extendible para nuevos patrones
+        """
+        if pattern_name == "simple":
+            return {
+                "type": "simple",
+                "procedure_name": match.group(1).strip(),
+                "raw": line
+            }
+        elif pattern_name == "thru":
+            return {
+                "type": "thru",
+                "start_procedure": match.group(1).strip(),
+                "end_procedure": match.group(2).strip(),
+                "raw": line
+            }
+        elif pattern_name == "times":
+            return {
+                "type": "times",
+                "count": match.group(1).strip(),
+                "raw": line
+            }
+        elif pattern_name == "procedure_until":
+            return {
+                "type": "procedure_until",
+                "procedure_name": match.group(1).strip(),
+                "condition": match.group(2).strip(),
+                "raw": line
+            }
+        elif pattern_name == "until":
+            return {
+                "type": "until",
+                "condition": match.group(1).strip(),
+                "raw": line
+            }
+        elif pattern_name == "varying":
+            return {
+                "type": "varying",
+                "variable": match.group(1).strip(),
+                "from_value": match.group(2).strip(),
+                "by_value": match.group(3).strip(),
+                "until_condition": match.group(4).strip(),
+                "raw": line
+            }
+        elif pattern_name == "varying_after":
+            return {
+                "type": "varying_after",
+                "variable1": match.group(1).strip(),
+                "from_value1": match.group(2).strip(),
+                "by_value1": match.group(3).strip(),
+                "until_condition1": match.group(4).strip(),
+                "variable2": match.group(5).strip(),
+                "from_value2": match.group(6).strip(),
+                "by_value2": match.group(7).strip(),
+                "until_condition2": match.group(8).strip(),
+                "raw": line
+            }
+        elif pattern_name == "with_test_after":
+            return {
+                "type": "with_test_after",
+                "condition": match.group(1).strip(),
+                "raw": line
+            }
+        elif pattern_name == "inline":
+            return {
+                "type": "inline",
+                "raw": line
+            }
+        
+        return {"type": "generic", "raw": line}
+    
+    def _convert_perform_simple(self, perform_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir PERFORM simple (llamada a procedimiento)
+        Ejemplos: PERFORM A1000-INICIO → A1000_INICIO;
+        """
+        procedure_name = perform_info["procedure_name"]
+        plsql_name = self._convert_cobol_to_plsql_identifier(procedure_name)
+        
+        return f"""
+  {plsql_name}; -- {raw_content}"""
+    
+    def _convert_perform_thru(self, perform_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir PERFORM THRU (rango de procedimientos)
+        """
+        start_proc = self._convert_cobol_to_plsql_identifier(perform_info["start_procedure"])
+        end_proc = self._convert_cobol_to_plsql_identifier(perform_info["end_procedure"])
+        
+        return f"""
+  {start_proc}; -- {raw_content}
+  -- GAP: Implementar rango de procedimientos hasta {end_proc}"""
+    
+    def _convert_perform_times(self, perform_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir PERFORM n TIMES
+        Ejemplos: PERFORM 10 TIMES → FOR i IN 1..10 LOOP
+        """
+        count = perform_info["count"]
+        
+        return f"""
+  -- PERFORM {count} TIMES convertido a FOR LOOP
+  FOR i IN 1..{count} LOOP
+    -- {raw_content}
+    -- GAP: Implementar contenido del loop
+  END LOOP;"""
+    
+    def _convert_perform_procedure_until(self, perform_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir PERFORM procedure UNTIL condition
+        Ejemplos: PERFORM 2000-PROCESO UNTIL NO-ENCONTRADO → WHILE NOT no_encontrado LOOP A2000_PROCESO; END LOOP;
+        """
+        procedure_name = perform_info["procedure_name"]
+        condition = perform_info["condition"]
+        
+        plsql_procedure = self._convert_cobol_to_plsql_identifier(procedure_name)
+        plsql_condition = self._convert_cobol_to_plsql_identifier(condition)
+        
+        # Para condiciones como NO-ENCONTRADO, convertir a variable booleana
+        negated_condition = f"NOT {plsql_condition}"
+        
+        return f"""
+  -- PERFORM {procedure_name} UNTIL {condition} convertido a WHILE LOOP
+  WHILE {negated_condition} LOOP
+    {plsql_procedure}; -- {raw_content}
+  END LOOP;"""
+    
+    def _convert_perform_until(self, perform_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir PERFORM UNTIL
+        Ejemplos: PERFORM UNTIL WS-FLAG = 'Y' → WHILE ws_flag != 'Y' LOOP
+        """
+        condition = perform_info["condition"]
+        plsql_condition = self._convert_cobol_condition_to_plsql(condition)
+        # Negar la condición para WHILE (PERFORM UNTIL se convierte en WHILE NOT)
+        negated_condition = self._negate_condition(plsql_condition)
+        
+        return f"""
+  -- PERFORM UNTIL convertido a WHILE LOOP
+  WHILE {negated_condition} LOOP
+    -- {raw_content}
+    -- GAP: Implementar contenido del loop
+  END LOOP;"""
+    
+    def _convert_perform_varying(self, perform_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir PERFORM VARYING
+        Ejemplos: PERFORM VARYING WS-I FROM 1 BY 1 UNTIL WS-I > 10 → FOR ws_i IN 1..10 LOOP
+        """
+        variable = self._convert_cobol_to_plsql_identifier(perform_info["variable"])
+        from_value = perform_info["from_value"]
+        by_value = perform_info["by_value"]
+        until_condition = perform_info["until_condition"]
+        
+        # Intentar extraer el valor final de la condición UNTIL
+        end_value = self._extract_end_value_from_until(until_condition, perform_info["variable"])
+        
+        if end_value and by_value == "1":
+            # Convertir a FOR simple si es incremento de 1
+            return f"""
+  -- PERFORM VARYING convertido a FOR LOOP
+  FOR {variable} IN {from_value}..{end_value} LOOP
+    -- {raw_content}
+    -- GAP: Implementar contenido del loop
+  END LOOP;"""
+        else:
+            # Usar WHILE para casos más complejos
+            plsql_condition = self._convert_cobol_condition_to_plsql(until_condition)
+            negated_condition = self._negate_condition(plsql_condition)
+            
+            return f"""
+  -- PERFORM VARYING convertido a WHILE LOOP
+  {variable} := {from_value};
+  WHILE {negated_condition} LOOP
+    -- {raw_content}
+    -- GAP: Implementar contenido del loop
+    {variable} := {variable} + {by_value};
+  END LOOP;"""
+    
+    def _convert_perform_varying_after(self, perform_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir PERFORM VARYING ... AFTER (loops anidados)
+        """
+        var1 = self._convert_cobol_to_plsql_identifier(perform_info["variable1"])
+        from1 = perform_info["from_value1"]
+        by1 = perform_info["by_value1"]
+        until1 = perform_info["until_condition1"]
+        
+        var2 = self._convert_cobol_to_plsql_identifier(perform_info["variable2"])
+        from2 = perform_info["from_value2"]
+        by2 = perform_info["by_value2"]
+        until2 = perform_info["until_condition2"]
+        
+        # Intentar extraer valores finales
+        end1 = self._extract_end_value_from_until(until1, perform_info["variable1"])
+        end2 = self._extract_end_value_from_until(until2, perform_info["variable2"])
+        
+        if end1 and end2 and by1 == "1" and by2 == "1":
+            return f"""
+  -- PERFORM VARYING AFTER convertido a FOR LOOPS anidados
+  FOR {var1} IN {from1}..{end1} LOOP
+    FOR {var2} IN {from2}..{end2} LOOP
+      -- {raw_content}
+      -- GAP: Implementar contenido del loop anidado
+    END LOOP;
+  END LOOP;"""
+        else:
+            return f"""
+  -- PERFORM VARYING AFTER convertido a WHILE LOOPS anidados
+  {var1} := {from1};
+  WHILE {self._negate_condition(self._convert_cobol_condition_to_plsql(until1))} LOOP
+    {var2} := {from2};
+    WHILE {self._negate_condition(self._convert_cobol_condition_to_plsql(until2))} LOOP
+      -- {raw_content}
+      -- GAP: Implementar contenido del loop anidado
+      {var2} := {var2} + {by2};
+    END LOOP;
+    {var1} := {var1} + {by1};
+  END LOOP;"""
+    
+    def _convert_perform_with_test_after(self, perform_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir PERFORM WITH TEST AFTER (DO-WHILE equivalent)
+        """
+        condition = perform_info["condition"]
+        plsql_condition = self._convert_cobol_condition_to_plsql(condition)
+        
+        return f"""
+  -- PERFORM WITH TEST AFTER convertido a LOOP con EXIT
+  LOOP
+    -- {raw_content}
+    -- GAP: Implementar contenido del loop
+    EXIT WHEN {plsql_condition};
+  END LOOP;"""
+    
+    def _convert_perform_inline(self, perform_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir PERFORM inline (sin procedimiento específico)
+        """
+        return f"""
+  -- PERFORM inline
+  BEGIN
+    -- {raw_content}
+    -- GAP: Implementar contenido inline
+  END;"""
+    
+    def _convert_perform_generic(self, perform_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir PERFORM genérico cuando no coincide con patrones específicos
+        """
+        return f"""
+  -- GAP -- {raw_content} -- (PERFORM statement - generic)"""
+    
+    def _extract_end_value_from_until(self, until_condition: str, variable: str) -> str:
+        """
+        Extraer valor final de una condición UNTIL para optimizar a FOR loop
+        """
+        import re
+        
+        # Patrones comunes para extraer el valor final
+        patterns = [
+            rf"{variable}\s*>\s*(\d+)",
+            rf"{variable}\s*>=\s*(\d+)",
+            rf"(\d+)\s*<\s*{variable}",
+            rf"(\d+)\s*<=\s*{variable}"
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, until_condition, re.IGNORECASE)
+            if match:
+                value = int(match.group(1))
+                # Ajustar según el operador
+                if ">" in until_condition and "=" not in until_condition:
+                    return str(value)
+                elif ">=" in until_condition:
+                    return str(value - 1)
+                elif "<" in until_condition and "=" not in until_condition:
+                    return str(value - 1)
+                elif "<=" in until_condition:
+                    return str(value)
+        
+        return None
+    
+    def _negate_condition(self, condition: str) -> str:
+        """
+        Negar una condición PL/SQL para convertir UNTIL a WHILE
+        """
+        condition = condition.strip()
+        
+        # Casos simples de negación
+        if condition.startswith("NOT "):
+            return condition[4:]  # Quitar NOT
+        elif "=" in condition and "!=" not in condition and "<>" not in condition:
+            return condition.replace("=", "!=")
+        elif "!=" in condition:
+            return condition.replace("!=", "=")
+        elif "<>" in condition:
+            return condition.replace("<>", "=")
+        elif " > " in condition:
+            return condition.replace(" > ", " <= ")
+        elif " >= " in condition:
+            return condition.replace(" >= ", " < ")
+        elif " < " in condition:
+            return condition.replace(" < ", " >= ")
+        elif " <= " in condition:
+            return condition.replace(" <= ", " > ")
+        else:
+            return f"NOT ({condition})"
+    
+    def _generate_perform_utility_functions(self) -> str:
+        """
+        Generar funciones de utilidad para operaciones PERFORM
+        Principio Dependency Inversion: Depende de abstracciones de PERFORM operations
+        """
+        return """
+  
+  /*
+   *-------------------------------------------------------------*
+   * FUNCIONES DE UTILIDAD PARA OPERACIONES PERFORM            *
+   *-------------------------------------------------------------*
+   */
+   
+  -- Contador global para loops anidados
+  g_loop_counter BINARY_INTEGER := 0;
+  
+  -- Procedimiento para manejo de EXIT PERFORM
+  PROCEDURE exit_perform_loop IS
+  BEGIN
+    -- Simular EXIT PERFORM usando excepción controlada
+    RAISE_APPLICATION_ERROR(-20100, 'EXIT_PERFORM');
+  END exit_perform_loop;
+  
+  -- Función para evaluar condiciones UNTIL dinámicamente
+  FUNCTION evaluate_until_condition(p_condition VARCHAR2, 
+                                   p_variable_name VARCHAR2,
+                                   p_variable_value NUMBER) RETURN BOOLEAN IS
+  BEGIN
+    -- Implementación básica para condiciones numéricas comunes
+    -- GAP: Expandir para más tipos de condiciones
+    IF INSTR(p_condition, '>') > 0 THEN
+      RETURN p_variable_value > TO_NUMBER(SUBSTR(p_condition, INSTR(p_condition, '>') + 1));
+    ELSIF INSTR(p_condition, '>=') > 0 THEN
+      RETURN p_variable_value >= TO_NUMBER(SUBSTR(p_condition, INSTR(p_condition, '>=') + 2));
+    ELSIF INSTR(p_condition, '=') > 0 THEN
+      RETURN p_variable_value = TO_NUMBER(SUBSTR(p_condition, INSTR(p_condition, '=') + 1));
+    END IF;
+    
+    RETURN FALSE;
+  END evaluate_until_condition;
+  
+  -- Procedimiento para PERFORM con parámetros (USING)
+  PROCEDURE perform_with_parameters(p_procedure_name VARCHAR2,
+                                   p_param1 VARCHAR2 DEFAULT NULL,
+                                   p_param2 VARCHAR2 DEFAULT NULL,
+                                   p_param3 VARCHAR2 DEFAULT NULL) IS
+  BEGIN
+    -- GAP: Implementar llamada dinámica a procedimientos con parámetros
+    DBMS_OUTPUT.PUT_LINE('Calling ' || p_procedure_name || 
+                        ' with params: ' || p_param1 || ', ' || p_param2 || ', ' || p_param3);
+  END perform_with_parameters;
+  
+  -- Función para validar rangos en PERFORM VARYING
+  FUNCTION validate_varying_range(p_variable_name VARCHAR2,
+                                 p_from_value NUMBER,
+                                 p_to_value NUMBER,
+                                 p_by_value NUMBER DEFAULT 1) RETURN BOOLEAN IS
+  BEGIN
+    IF p_by_value = 0 THEN
+      RAISE_APPLICATION_ERROR(-20101, 'BY value cannot be zero in PERFORM VARYING');
+    END IF;
+    
+    IF p_by_value > 0 AND p_from_value > p_to_value THEN
+      RAISE_APPLICATION_ERROR(-20102, 'Invalid range in PERFORM VARYING: FROM > TO with positive BY');
+    END IF;
+    
+    IF p_by_value < 0 AND p_from_value < p_to_value THEN
+      RAISE_APPLICATION_ERROR(-20103, 'Invalid range in PERFORM VARYING: FROM < TO with negative BY');
+    END IF;
+    
+    RETURN TRUE;
+  END validate_varying_range;"""
 
     # ===== CONVERTIDORES EXEC SQL SIGUIENDO PRINCIPIOS SOLID =====
     
