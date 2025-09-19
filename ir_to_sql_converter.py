@@ -2127,9 +2127,9 @@ END {program_name};
                     else:
                         # Convertir statement normal
                         if op == "MOVE":
-                            procedures_section += f"""
-  -- GAP -- {raw_content.strip()} -- (MOVE statement)"""
-                            gap_count += 1
+                            # Aplicar conversión completa de MOVE usando principios SOLID
+                            converted_move = self._convert_move_statement(stmt)
+                            procedures_section += converted_move
                         elif op == "DISPLAY":
                             procedures_section += f"""
   -- DBMS_OUTPUT.PUT_LINE({raw_content.replace('DISPLAY', '').strip()}); -- (DISPLAY statement)"""
@@ -2154,6 +2154,414 @@ END {program_name};
         
         return procedures_section, gap_count, macro_gap_count
     
+    # ===== CONVERTIDORES MOVE SIGUIENDO PRINCIPIOS SOLID =====
+    
+    def _convert_move_statement(self, stmt: Dict[str, Any]) -> str:
+        """
+        Convertir statement MOVE a PL/SQL siguiendo equivalencias del archivo de referencia
+        Principio Single Responsibility: Solo maneja conversión de MOVE
+        """
+        raw_content = stmt.get("raw", "").strip()
+        details = stmt.get("details", {})
+        
+        print(f"🔄 Convirtiendo MOVE: {raw_content}")
+        
+        # Extraer información de la sentencia MOVE
+        move_info = self._parse_move_statement(raw_content)
+        
+        if not move_info:
+            return f"\n  -- GAP -- {raw_content} -- (MOVE statement - parsing failed)"
+        
+        # Aplicar patrón Strategy para diferentes tipos de MOVE
+        try:
+            if move_info["type"] == "simple":
+                return self._convert_move_simple(move_info, raw_content)
+            elif move_info["type"] == "special_values":
+                return self._convert_move_special_values(move_info, raw_content)
+            elif move_info["type"] == "qualified_source":
+                return self._convert_move_qualified_source(move_info, raw_content)
+            elif move_info["type"] == "qualified_target":
+                return self._convert_move_qualified_target(move_info, raw_content)
+            elif move_info["type"] == "qualified_to_qualified":
+                return self._convert_move_qualified_to_qualified(move_info, raw_content)
+            elif move_info["type"] == "array_element":
+                return self._convert_move_array_element(move_info, raw_content)
+            elif move_info["type"] == "substring":
+                return self._convert_move_substring(move_info, raw_content)
+            elif move_info["type"] == "corresponding":
+                return self._convert_move_corresponding(move_info, raw_content)
+            else:
+                return self._convert_move_generic(move_info, raw_content)
+        except Exception as e:
+            print(f"❌ Error convirtiendo MOVE: {e}")
+            return f"\n  -- GAP -- {raw_content} -- (MOVE statement - conversion error)"
+    
+    def _parse_move_statement(self, raw_content: str) -> Dict[str, Any]:
+        """
+        Parsear sentencia MOVE para extraer componentes
+        Principio Single Responsibility: Solo parsing de MOVE
+        """
+        import re
+        
+        # Limpiar la línea
+        line = raw_content.strip()
+        
+        # Patrones para diferentes tipos de MOVE (orden importa - más específicos primero)
+        patterns = {
+            "corresponding": r"MOVE\s+CORRESPONDING\s+(.+?)\s+TO\s+(.+?)(?:\.|$)",
+            "qualified_to_qualified": r"MOVE\s+(.+?)\s+OF\s+(.+?)\s+TO\s+(.+?)\s+OF\s+(.+?)(?:\.|$)",
+            "qualified_source": r"MOVE\s+(.+?)\s+OF\s+(.+?)\s+TO\s+(.+?)(?:\.|$)",
+            "qualified_target": r"MOVE\s+(.+?)\s+TO\s+(.+?)\s+OF\s+(.+?)(?:\.|$)",
+            "array_element": r"MOVE\s+(.+?)\s*\((.+?)\)\s+TO\s+(.+?)(?:\.|$)",
+            "substring": r"MOVE\s+(.+?)\s*\((\d+):(\d+)\)\s+TO\s+(.+?)(?:\.|$)",
+            "simple": r"MOVE\s+(.+?)\s+TO\s+(.+?)(?:\.|$)",
+        }
+        
+        # Detectar valores especiales
+        special_values = ["ZEROS", "ZERO", "SPACES", "SPACE", "HIGH-VALUES", "LOW-VALUES"]
+        
+        for pattern_name, pattern in patterns.items():
+            match = re.search(pattern, line, re.IGNORECASE)
+            if match:
+                if pattern_name == "simple":
+                    source = match.group(1).strip()
+                    target = match.group(2).strip()
+                    
+                    # Detectar si es valor especial
+                    if any(sv in source.upper() for sv in special_values):
+                        return {
+                            "type": "special_values",
+                            "source": source,
+                            "target": target,
+                            "raw": line
+                        }
+                    else:
+                        return {
+                            "type": "simple",
+                            "source": source,
+                            "target": target,
+                            "raw": line
+                        }
+                elif pattern_name == "corresponding":
+                    return {
+                        "type": "corresponding",
+                        "source": match.group(1).strip(),
+                        "target": match.group(2).strip(),
+                        "raw": line
+                    }
+                elif pattern_name == "qualified_source":
+                    return {
+                        "type": "qualified_source",
+                        "source": match.group(1).strip(),
+                        "source_qualifier": match.group(2).strip(),
+                        "target": match.group(3).strip(),
+                        "raw": line
+                    }
+                elif pattern_name == "qualified_target":
+                    return {
+                        "type": "qualified_target",
+                        "source": match.group(1).strip(),
+                        "target": match.group(2).strip(),
+                        "target_qualifier": match.group(3).strip(),
+                        "raw": line
+                    }
+                elif pattern_name == "qualified_to_qualified":
+                    return {
+                        "type": "qualified_to_qualified",
+                        "source": match.group(1).strip(),
+                        "source_qualifier": match.group(2).strip(),
+                        "target": match.group(3).strip(),
+                        "target_qualifier": match.group(4).strip(),
+                        "raw": line
+                    }
+                elif pattern_name == "array_element":
+                    return {
+                        "type": "array_element",
+                        "source": match.group(1).strip(),
+                        "index": match.group(2).strip(),
+                        "target": match.group(3).strip(),
+                        "raw": line
+                    }
+                elif pattern_name == "substring":
+                    return {
+                        "type": "substring",
+                        "source": match.group(1).strip(),
+                        "start_pos": match.group(2).strip(),
+                        "end_pos": match.group(3).strip(),
+                        "target": match.group(4).strip(),
+                        "raw": line
+                    }
+        
+        # Si no coincide con ningún patrón específico, devolver genérico
+        return {
+            "type": "generic",
+            "raw": line
+        }
+    
+    def _convert_move_simple(self, move_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir MOVE simple siguiendo patrón: var := value;
+        Principio Open/Closed: Extendible para nuevos tipos simples
+        """
+        source = self._clean_cobol_identifier(move_info["source"])
+        target = self._clean_cobol_identifier(move_info["target"])
+        
+        # Detectar si el source es un literal
+        if self._is_literal(source):
+            converted_source = self._convert_literal(source)
+        else:
+            converted_source = self._convert_cobol_to_plsql_identifier(source)
+        
+        converted_target = self._convert_cobol_to_plsql_identifier(target)
+        
+        # Detectar conversiones comunes que requieren funciones PL/SQL
+        if self._needs_type_conversion(source, target, raw_content):
+            converted_source = self._apply_type_conversion(converted_source, source, target, raw_content)
+        
+        return f"""
+  {converted_target} := {converted_source}; -- {raw_content}"""
+    
+    def _needs_type_conversion(self, source: str, target: str, raw_content: str) -> bool:
+        """
+        Detectar si se requiere conversión de tipos basado en patrones comunes
+        """
+        # Convertir a uppercase para análisis
+        upper_content = raw_content.upper()
+        
+        # Detectar conversiones numéricas a texto que requieren TO_CHAR
+        if any(keyword in upper_content for keyword in ['NUM-', 'COD-', 'ID-', 'NUMERO']) and \
+           any(keyword in upper_content for keyword in ['TEXTO', 'DESC-', 'NOMBRE', 'DEL-']):
+            return True
+            
+        # Detectar fechas que requieren conversión
+        if any(keyword in upper_content for keyword in ['FEC-', 'FECHA', 'FEM-']):
+            return True
+            
+        return False
+    
+    def _apply_type_conversion(self, converted_source: str, source: str, target: str, raw_content: str) -> str:
+        """
+        Aplicar conversión de tipos apropiada
+        """
+        upper_content = raw_content.upper()
+        
+        # Conversiones de fecha
+        if any(keyword in upper_content for keyword in ['FEC-', 'FECHA', 'FEM-']):
+            # Si parece una fecha numérica (YYYYMMDD)
+            if 'FEC' in source.upper() and any(num in source for num in '0123456789'):
+                return f"TO_DATE(TO_CHAR({converted_source}), 'YYYYMMDD')"
+            # Si es string de fecha
+            elif 'FEC' in target.upper():
+                return f"TO_CHAR({converted_source}, 'YYYY-MM-DD')"
+        
+        # Conversiones numéricas a texto
+        if any(keyword in upper_content for keyword in ['NUM-', 'COD-']) and \
+           any(keyword in upper_content for keyword in ['TEXTO', 'DESC-']):
+            return f"TO_CHAR({converted_source})"
+        
+        return converted_source
+    
+    def _convert_move_special_values(self, move_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir MOVE con valores especiales (ZEROS, SPACES, etc.)
+        Principio Liskov Substitution: Puede sustituir move simple
+        """
+        source = move_info["source"].upper()
+        target = self._convert_cobol_to_plsql_identifier(move_info["target"])
+        
+        # Mapeo de valores especiales según archivo de equivalencias
+        special_mappings = {
+            "ZEROS": "0",
+            "ZERO": "0", 
+            "SPACES": "NULL",
+            "SPACE": "NULL",
+            "HIGH-VALUES": "CHR(255)",
+            "LOW-VALUES": "CHR(0)"
+        }
+        
+        for special, plsql_value in special_mappings.items():
+            if special in source:
+                return f"""
+  {target} := {plsql_value}; -- {raw_content}"""
+        
+        # Si no es un valor especial conocido, tratar como simple
+        return self._convert_move_simple(move_info, raw_content)
+    
+    def _convert_move_qualified_source(self, move_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir MOVE con source calificado (field OF record TO target)
+        """
+        source = self._clean_cobol_identifier(move_info["source"])
+        source_qualifier = self._clean_cobol_identifier(move_info["source_qualifier"])
+        target = self._clean_cobol_identifier(move_info["target"])
+        
+        # Convertir source calificado
+        converted_source = f"{self._convert_cobol_to_plsql_identifier(source_qualifier)}.{self._convert_cobol_to_plsql_identifier(source)}"
+        converted_target = self._convert_cobol_to_plsql_identifier(target)
+        
+        return f"""
+  {converted_target} := {converted_source}; -- {raw_content}"""
+    
+    def _convert_move_qualified_target(self, move_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir MOVE con target calificado (source TO field OF record)
+        """
+        source = self._clean_cobol_identifier(move_info["source"])
+        target = self._clean_cobol_identifier(move_info["target"])
+        target_qualifier = self._clean_cobol_identifier(move_info["target_qualifier"])
+        
+        # Detectar si el source es un literal
+        if self._is_literal(source):
+            converted_source = self._convert_literal(source)
+        else:
+            converted_source = self._convert_cobol_to_plsql_identifier(source)
+        
+        # Convertir target calificado
+        converted_target = f"{self._convert_cobol_to_plsql_identifier(target_qualifier)}.{self._convert_cobol_to_plsql_identifier(target)}"
+        
+        return f"""
+  {converted_target} := {converted_source}; -- {raw_content}"""
+    
+    def _convert_move_qualified_to_qualified(self, move_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir MOVE entre campos calificados (field1 OF record1 TO field2 OF record2)
+        """
+        source = self._clean_cobol_identifier(move_info["source"])
+        source_qualifier = self._clean_cobol_identifier(move_info["source_qualifier"])
+        target = self._clean_cobol_identifier(move_info["target"])
+        target_qualifier = self._clean_cobol_identifier(move_info["target_qualifier"])
+        
+        # Convertir ambos como calificados
+        converted_source = f"{self._convert_cobol_to_plsql_identifier(source_qualifier)}.{self._convert_cobol_to_plsql_identifier(source)}"
+        converted_target = f"{self._convert_cobol_to_plsql_identifier(target_qualifier)}.{self._convert_cobol_to_plsql_identifier(target)}"
+        
+        return f"""
+  {converted_target} := {converted_source}; -- {raw_content}"""
+    
+    def _convert_move_array_element(self, move_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir MOVE con elementos de array (array(index) TO target)
+        """
+        source = self._clean_cobol_identifier(move_info["source"])
+        index = self._clean_cobol_identifier(move_info["index"])
+        target = self._clean_cobol_identifier(move_info["target"])
+        
+        # Convertir índice (puede ser literal o variable)
+        if self._is_literal(index):
+            converted_index = self._convert_literal(index)
+        else:
+            converted_index = self._convert_cobol_to_plsql_identifier(index)
+        
+        converted_source = f"{self._convert_cobol_to_plsql_identifier(source)}({converted_index})"
+        converted_target = self._convert_cobol_to_plsql_identifier(target)
+        
+        return f"""
+  {converted_target} := {converted_source}; -- {raw_content}"""
+    
+    def _convert_move_substring(self, move_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir MOVE con substring (source(start:end) TO target)
+        Equivale a SUBSTR en PL/SQL
+        """
+        source = self._clean_cobol_identifier(move_info["source"])
+        start_pos = move_info["start_pos"]
+        end_pos = move_info["end_pos"]
+        target = self._clean_cobol_identifier(move_info["target"])
+        
+        converted_source = self._convert_cobol_to_plsql_identifier(source)
+        converted_target = self._convert_cobol_to_plsql_identifier(target)
+        
+        # Calcular longitud para SUBSTR
+        length = int(end_pos) - int(start_pos) + 1
+        
+        return f"""
+  {converted_target} := SUBSTR({converted_source}, {start_pos}, {length}); -- {raw_content}"""
+    
+    def _convert_move_corresponding(self, move_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir MOVE CORRESPONDING
+        Principio Dependency Inversion: Depende de abstracciones de mapeo
+        """
+        source = self._convert_cobol_to_plsql_identifier(move_info["source"])
+        target = self._convert_cobol_to_plsql_identifier(move_info["target"])
+        
+        return f"""
+  -- MOVE CORRESPONDING requiere mapeo manual campo por campo
+  -- {target} := {source}; -- {raw_content}
+  -- GAP: Implementar mapeo específico de campos correspondientes"""
+    
+    def _convert_move_generic(self, move_info: Dict[str, Any], raw_content: str) -> str:
+        """
+        Convertir MOVE genérico cuando no coincide con patrones específicos
+        Principio Single Responsibility: Maneja casos no identificados
+        """
+        return f"""
+  -- GAP -- {raw_content} -- (MOVE statement - generic)"""
+    
+    def _clean_cobol_identifier(self, identifier: str) -> str:
+        """
+        Limpiar identificador COBOL removiendo espacios y caracteres especiales
+        """
+        if not identifier:
+            return ""
+        
+        # Remover puntos finales y espacios
+        cleaned = identifier.strip().rstrip('.')
+        return cleaned
+    
+    def _is_literal(self, value: str) -> bool:
+        """
+        Detectar si un valor es un literal (número o string)
+        """
+        if not value:
+            return False
+            
+        # Es número
+        if value.replace('.', '').replace('-', '').isdigit():
+            return True
+            
+        # Es string (entre comillas)
+        if (value.startswith("'") and value.endswith("'")) or \
+           (value.startswith('"') and value.endswith('"')):
+            return True
+            
+        return False
+    
+    def _convert_literal(self, literal: str) -> str:
+        """
+        Convertir literal COBOL a PL/SQL
+        """
+        if not literal:
+            return "NULL"
+            
+        # Si es número, mantener como está
+        if literal.replace('.', '').replace('-', '').isdigit():
+            return literal
+            
+        # Si es string, mantener comillas simples
+        if literal.startswith("'") and literal.endswith("'"):
+            return literal
+        elif literal.startswith('"') and literal.endswith('"'):
+            return f"'{literal[1:-1]}'"  # Convertir comillas dobles a simples
+            
+        return f"'{literal}'"
+    
+    def _convert_cobol_to_plsql_identifier(self, identifier: str) -> str:
+        """
+        Convertir identificador COBOL a PL/SQL (cambiar guiones por guiones bajos)
+        """
+        if not identifier:
+            return ""
+            
+        # Convertir guiones a guiones bajos y a minúsculas
+        converted = identifier.replace('-', '_').lower()
+        
+        # Si comienza con número, agregar prefijo
+        if converted and converted[0].isdigit():
+            converted = f"v_{converted}"
+            
+        return converted
+
     # ===== CONVERTIDORES EXEC SQL SIGUIENDO PRINCIPIOS SOLID =====
     
     def _convert_exec_sql_statement(self, stmt: Dict[str, Any]) -> str:
