@@ -1,0 +1,1807 @@
+{
+  "cobol_file": "samples/C1040.cob",
+  "ir_file": "out/C1040_ir_clean.json",
+  "expected_performs_count": 47,
+  "ir_performs_count": 47,
+  "expected_performs": [
+    {
+      "line_number": 837,
+      "raw_line": "PERFORM 1000-INICIO.",
+      "clean_line": "PERFORM 1000-INICIO.",
+      "type": "SIMPLE",
+      "target": "1000-INICIO",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 838,
+      "raw_line": "PERFORM 2000-PROCESO UNTIL NO-ENCONTRADO.",
+      "clean_line": "PERFORM 2000-PROCESO UNTIL NO-ENCONTRADO.",
+      "type": "UNTIL",
+      "target": "2000-PROCESO",
+      "thru_target": null,
+      "until_condition": "NO-ENCONTRADO",
+      "pattern": "PERFORM target UNTIL condition"
+    },
+    {
+      "line_number": 839,
+      "raw_line": "PERFORM 8000-FINAL.",
+      "clean_line": "PERFORM 8000-FINAL.",
+      "type": "SIMPLE",
+      "target": "8000-FINAL",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 933,
+      "raw_line": "PERFORM A1100-OBTENER-HCT.",
+      "clean_line": "PERFORM A1100-OBTENER-HCT.",
+      "type": "SIMPLE",
+      "target": "A1100-OBTENER-HCT",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 935,
+      "raw_line": "PERFORM A1110-OBTENER-TIMESTAMP-MTO.",
+      "clean_line": "PERFORM A1110-OBTENER-TIMESTAMP-MTO.",
+      "type": "SIMPLE",
+      "target": "A1110-OBTENER-TIMESTAMP-MTO",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 974,
+      "raw_line": "PERFORM A1200-ABRIR-CURSOR-EXTR.",
+      "clean_line": "PERFORM A1200-ABRIR-CURSOR-EXTR.",
+      "type": "SIMPLE",
+      "target": "A1200-ABRIR-CURSOR-EXTR",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 976,
+      "raw_line": "PERFORM A1300-LEER-EXTRAIDOS.",
+      "clean_line": "PERFORM A1300-LEER-EXTRAIDOS.",
+      "type": "SIMPLE",
+      "target": "A1300-LEER-EXTRAIDOS",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 992,
+      "raw_line": "PERFORM A3000-OBTENER-LISTADO",
+      "clean_line": "PERFORM A3000-OBTENER-LISTADO",
+      "type": "SIMPLE",
+      "target": "A3000-OBTENER-LISTADO",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1008,
+      "raw_line": "PERFORM A1800-OBTENER-CABE-ESTAD.",
+      "clean_line": "PERFORM A1800-OBTENER-CABE-ESTAD.",
+      "type": "SIMPLE",
+      "target": "A1800-OBTENER-CABE-ESTAD",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1010,
+      "raw_line": "PERFORM A1400-CERRAR-CURSOR-EXTR.",
+      "clean_line": "PERFORM A1400-CERRAR-CURSOR-EXTR.",
+      "type": "SIMPLE",
+      "target": "A1400-CERRAR-CURSOR-EXTR",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1012,
+      "raw_line": "PERFORM A1450-OBTIENE-RANGO.",
+      "clean_line": "PERFORM A1450-OBTIENE-RANGO.",
+      "type": "SIMPLE",
+      "target": "A1450-OBTIENE-RANGO",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1014,
+      "raw_line": "PERFORM A1500-ABRIR-CURSOR-PEND.",
+      "clean_line": "PERFORM A1500-ABRIR-CURSOR-PEND.",
+      "type": "SIMPLE",
+      "target": "A1500-ABRIR-CURSOR-PEND",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1016,
+      "raw_line": "PERFORM A1600-LEER-PENDIENTES.",
+      "clean_line": "PERFORM A1600-LEER-PENDIENTES.",
+      "type": "SIMPLE",
+      "target": "A1600-LEER-PENDIENTES",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1446,
+      "raw_line": "PERFORM A9100-ROLLBACK",
+      "clean_line": "PERFORM A9100-ROLLBACK",
+      "type": "SIMPLE",
+      "target": "A9100-ROLLBACK",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1467,
+      "raw_line": "PERFORM A9100-ROLLBACK",
+      "clean_line": "PERFORM A9100-ROLLBACK",
+      "type": "SIMPLE",
+      "target": "A9100-ROLLBACK",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1488,
+      "raw_line": "PERFORM A3100-OBTENER-DESC-EMPRESA.",
+      "clean_line": "PERFORM A3100-OBTENER-DESC-EMPRESA.",
+      "type": "SIMPLE",
+      "target": "A3100-OBTENER-DESC-EMPRESA",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1566,
+      "raw_line": "PERFORM A2500-ACTUAL-ESTADO-INCID",
+      "clean_line": "PERFORM A2500-ACTUAL-ESTADO-INCID",
+      "type": "SIMPLE",
+      "target": "A2500-ACTUAL-ESTADO-INCID",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1569,
+      "raw_line": "PERFORM A2100-FORMATEAR-OBS20007",
+      "clean_line": "PERFORM A2100-FORMATEAR-OBS20007",
+      "type": "SIMPLE",
+      "target": "A2100-FORMATEAR-OBS20007",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1575,
+      "raw_line": "PERFORM A9100-ROLLBACK",
+      "clean_line": "PERFORM A9100-ROLLBACK",
+      "type": "SIMPLE",
+      "target": "A9100-ROLLBACK",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1579,
+      "raw_line": "PERFORM A2200-FORMATEAR-CAS10010",
+      "clean_line": "PERFORM A2200-FORMATEAR-CAS10010",
+      "type": "SIMPLE",
+      "target": "A2200-FORMATEAR-CAS10010",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1592,
+      "raw_line": "PERFORM A9100-ROLLBACK",
+      "clean_line": "PERFORM A9100-ROLLBACK",
+      "type": "SIMPLE",
+      "target": "A9100-ROLLBACK",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1598,
+      "raw_line": "PERFORM A2300-GRABAR-RAD",
+      "clean_line": "PERFORM A2300-GRABAR-RAD",
+      "type": "SIMPLE",
+      "target": "A2300-GRABAR-RAD",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1603,
+      "raw_line": "PERFORM A2400-GENERAR-PROTESTO",
+      "clean_line": "PERFORM A2400-GENERAR-PROTESTO",
+      "type": "SIMPLE",
+      "target": "A2400-GENERAR-PROTESTO",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1615,
+      "raw_line": "PERFORM A2550-CONSULTAR-ESTADO-CHEQUE",
+      "clean_line": "PERFORM A2550-CONSULTAR-ESTADO-CHEQUE",
+      "type": "SIMPLE",
+      "target": "A2550-CONSULTAR-ESTADO-CHEQUE",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1621,
+      "raw_line": "PERFORM A2600-ACTUALIZA-ESTADO-CHEQUE",
+      "clean_line": "PERFORM A2600-ACTUALIZA-ESTADO-CHEQUE",
+      "type": "SIMPLE",
+      "target": "A2600-ACTUALIZA-ESTADO-CHEQUE",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1643,
+      "raw_line": "PERFORM A9100-ROLLBACK",
+      "clean_line": "PERFORM A9100-ROLLBACK",
+      "type": "SIMPLE",
+      "target": "A9100-ROLLBACK",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1654,
+      "raw_line": "PERFORM A1600-LEER-PENDIENTES.",
+      "clean_line": "PERFORM A1600-LEER-PENDIENTES.",
+      "type": "SIMPLE",
+      "target": "A1600-LEER-PENDIENTES",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1809,
+      "raw_line": "PERFORM A9100-ROLLBACK",
+      "clean_line": "PERFORM A9100-ROLLBACK",
+      "type": "SIMPLE",
+      "target": "A9100-ROLLBACK",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1820,
+      "raw_line": "PERFORM A2150-LEER-FECHA-DEVOL",
+      "clean_line": "PERFORM A2150-LEER-FECHA-DEVOL",
+      "type": "SIMPLE",
+      "target": "A2150-LEER-FECHA-DEVOL",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1933,
+      "raw_line": "PERFORM A9100-ROLLBACK",
+      "clean_line": "PERFORM A9100-ROLLBACK",
+      "type": "SIMPLE",
+      "target": "A9100-ROLLBACK",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 1948,
+      "raw_line": "PERFORM 2410-OBTENGO-USU-CONSI",
+      "clean_line": "PERFORM 2410-OBTENGO-USU-CONSI",
+      "type": "SIMPLE",
+      "target": "2410-OBTENGO-USU-CONSI",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 2010,
+      "raw_line": "PERFORM A9100-ROLLBACK",
+      "clean_line": "PERFORM A9100-ROLLBACK",
+      "type": "SIMPLE",
+      "target": "A9100-ROLLBACK",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 2121,
+      "raw_line": "PERFORM A2610-OBT-COD-PRIM-SEC.",
+      "clean_line": "PERFORM A2610-OBT-COD-PRIM-SEC.",
+      "type": "SIMPLE",
+      "target": "A2610-OBT-COD-PRIM-SEC",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 2132,
+      "raw_line": "PERFORM A2551-OBT-DIG-CONTR-CH.",
+      "clean_line": "PERFORM A2551-OBT-DIG-CONTR-CH.",
+      "type": "SIMPLE",
+      "target": "A2551-OBT-DIG-CONTR-CH",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 2157,
+      "raw_line": "PERFORM A9100-ROLLBACK",
+      "clean_line": "PERFORM A9100-ROLLBACK",
+      "type": "SIMPLE",
+      "target": "A9100-ROLLBACK",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 2191,
+      "raw_line": "PERFORM A9100-ROLLBACK",
+      "clean_line": "PERFORM A9100-ROLLBACK",
+      "type": "SIMPLE",
+      "target": "A9100-ROLLBACK",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 2249,
+      "raw_line": "PERFORM A2620-OBT-TIMESTAMP-CTA",
+      "clean_line": "PERFORM A2620-OBT-TIMESTAMP-CTA",
+      "type": "SIMPLE",
+      "target": "A2620-OBT-TIMESTAMP-CTA",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 2268,
+      "raw_line": "PERFORM A9100-ROLLBACK",
+      "clean_line": "PERFORM A9100-ROLLBACK",
+      "type": "SIMPLE",
+      "target": "A9100-ROLLBACK",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 2315,
+      "raw_line": "PERFORM A9100-ROLLBACK",
+      "clean_line": "PERFORM A9100-ROLLBACK",
+      "type": "SIMPLE",
+      "target": "A9100-ROLLBACK",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 2345,
+      "raw_line": "PERFORM A9100-ROLLBACK",
+      "clean_line": "PERFORM A9100-ROLLBACK",
+      "type": "SIMPLE",
+      "target": "A9100-ROLLBACK",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 2362,
+      "raw_line": "PERFORM A3100-OBTENER-DESC-EMPRESA.",
+      "clean_line": "PERFORM A3100-OBTENER-DESC-EMPRESA.",
+      "type": "SIMPLE",
+      "target": "A3100-OBTENER-DESC-EMPRESA",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 2370,
+      "raw_line": "PERFORM A3200-OBTENER-ENT-REMITENTE.",
+      "clean_line": "PERFORM A3200-OBTENER-ENT-REMITENTE.",
+      "type": "SIMPLE",
+      "target": "A3200-OBTENER-ENT-REMITENTE",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 2373,
+      "raw_line": "PERFORM A3300-CABECERA-LISTADO",
+      "clean_line": "PERFORM A3300-CABECERA-LISTADO",
+      "type": "SIMPLE",
+      "target": "A3300-CABECERA-LISTADO",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 2410,
+      "raw_line": "PERFORM A9100-ROLLBACK",
+      "clean_line": "PERFORM A9100-ROLLBACK",
+      "type": "SIMPLE",
+      "target": "A9100-ROLLBACK",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 2446,
+      "raw_line": "PERFORM A9100-ROLLBACK",
+      "clean_line": "PERFORM A9100-ROLLBACK",
+      "type": "SIMPLE",
+      "target": "A9100-ROLLBACK",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 2494,
+      "raw_line": "PERFORM A1700-CERRAR-CURSOR-PEND.",
+      "clean_line": "PERFORM A1700-CERRAR-CURSOR-PEND.",
+      "type": "SIMPLE",
+      "target": "A1700-CERRAR-CURSOR-PEND",
+      "pattern": "PERFORM target"
+    },
+    {
+      "line_number": 2502,
+      "raw_line": "PERFORM A8100-ESCRIBIR-ESTADIST.",
+      "clean_line": "PERFORM A8100-ESCRIBIR-ESTADIST.",
+      "type": "SIMPLE",
+      "target": "A8100-ESCRIBIR-ESTADIST",
+      "pattern": "PERFORM target"
+    }
+  ],
+  "ir_analysis": {
+    "ir_file": "out/C1040_ir_clean.json",
+    "program_name": "CAB1040",
+    "parse_method": "direct_parsing",
+    "perform_statements": [
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "1000-INICIO",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM 1000-INICIO."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "UNTIL",
+        "target": "2000-PROCESO",
+        "thru_target": null,
+        "times": null,
+        "until_condition": "NO-ENCONTRADO",
+        "varying_clause": null,
+        "raw": "PERFORM 2000-PROCESO UNTIL NO-ENCONTRADO."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "8000-FINAL",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM 8000-FINAL."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1100-OBTENER-HCT",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1100-OBTENER-HCT."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1110-OBTENER-TIMESTAMP-MTO",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1110-OBTENER-TIMESTAMP-MTO."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1200-ABRIR-CURSOR-EXTR",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1200-ABRIR-CURSOR-EXTR."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1300-LEER-EXTRAIDOS",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1300-LEER-EXTRAIDOS."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A3000-OBTENER-LISTADO",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A3000-OBTENER-LISTADO"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1800-OBTENER-CABE-ESTAD",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1800-OBTENER-CABE-ESTAD."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1400-CERRAR-CURSOR-EXTR",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1400-CERRAR-CURSOR-EXTR."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1450-OBTIENE-RANGO",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1450-OBTIENE-RANGO."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1500-ABRIR-CURSOR-PEND",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1500-ABRIR-CURSOR-PEND."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1600-LEER-PENDIENTES",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1600-LEER-PENDIENTES."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A3100-OBTENER-DESC-EMPRESA",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A3100-OBTENER-DESC-EMPRESA."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2500-ACTUAL-ESTADO-INCID",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2500-ACTUAL-ESTADO-INCID"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2100-FORMATEAR-OBS20007",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2100-FORMATEAR-OBS20007"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2200-FORMATEAR-CAS10010",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2200-FORMATEAR-CAS10010"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2300-GRABAR-RAD",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2300-GRABAR-RAD"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2400-GENERAR-PROTESTO",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2400-GENERAR-PROTESTO"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2550-CONSULTAR-ESTADO-CHEQUE",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2550-CONSULTAR-ESTADO-CHEQUE"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2600-ACTUALIZA-ESTADO-CHEQUE",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2600-ACTUALIZA-ESTADO-CHEQUE"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1600-LEER-PENDIENTES",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1600-LEER-PENDIENTES."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2150-LEER-FECHA-DEVOL",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2150-LEER-FECHA-DEVOL"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "2410-OBTENGO-USU-CONSI",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM 2410-OBTENGO-USU-CONSI"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2610-OBT-COD-PRIM-SEC",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2610-OBT-COD-PRIM-SEC."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2551-OBT-DIG-CONTR-CH",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2551-OBT-DIG-CONTR-CH."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2620-OBT-TIMESTAMP-CTA",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2620-OBT-TIMESTAMP-CTA"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A3100-OBTENER-DESC-EMPRESA",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A3100-OBTENER-DESC-EMPRESA."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A3200-OBTENER-ENT-REMITENTE",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A3200-OBTENER-ENT-REMITENTE."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A3300-CABECERA-LISTADO",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A3300-CABECERA-LISTADO"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1700-CERRAR-CURSOR-PEND",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1700-CERRAR-CURSOR-PEND."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A8100-ESCRIBIR-ESTADIST",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A8100-ESCRIBIR-ESTADIST."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1100-OBTENER-HCT",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1100-OBTENER-HCT."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1110-OBTENER-TIMESTAMP-MTO",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1110-OBTENER-TIMESTAMP-MTO."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1200-ABRIR-CURSOR-EXTR",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1200-ABRIR-CURSOR-EXTR."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1300-LEER-EXTRAIDOS",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1300-LEER-EXTRAIDOS."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A3000-OBTENER-LISTADO",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A3000-OBTENER-LISTADO"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1800-OBTENER-CABE-ESTAD",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1800-OBTENER-CABE-ESTAD."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1400-CERRAR-CURSOR-EXTR",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1400-CERRAR-CURSOR-EXTR."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1450-OBTIENE-RANGO",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1450-OBTIENE-RANGO."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1500-ABRIR-CURSOR-PEND",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1500-ABRIR-CURSOR-PEND."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1600-LEER-PENDIENTES",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1600-LEER-PENDIENTES."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A3100-OBTENER-DESC-EMPRESA",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A3100-OBTENER-DESC-EMPRESA."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2500-ACTUAL-ESTADO-INCID",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2500-ACTUAL-ESTADO-INCID"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2100-FORMATEAR-OBS20007",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2100-FORMATEAR-OBS20007"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2200-FORMATEAR-CAS10010",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2200-FORMATEAR-CAS10010"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2300-GRABAR-RAD",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2300-GRABAR-RAD"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2400-GENERAR-PROTESTO",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2400-GENERAR-PROTESTO"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2550-CONSULTAR-ESTADO-CHEQUE",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2550-CONSULTAR-ESTADO-CHEQUE"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2600-ACTUALIZA-ESTADO-CHEQUE",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2600-ACTUALIZA-ESTADO-CHEQUE"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1600-LEER-PENDIENTES",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1600-LEER-PENDIENTES."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2150-LEER-FECHA-DEVOL",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2150-LEER-FECHA-DEVOL"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "2410-OBTENGO-USU-CONSI",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM 2410-OBTENGO-USU-CONSI"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2610-OBT-COD-PRIM-SEC",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2610-OBT-COD-PRIM-SEC."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2551-OBT-DIG-CONTR-CH",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2551-OBT-DIG-CONTR-CH."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A2620-OBT-TIMESTAMP-CTA",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A2620-OBT-TIMESTAMP-CTA"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A3100-OBTENER-DESC-EMPRESA",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A3100-OBTENER-DESC-EMPRESA."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A3200-OBTENER-ENT-REMITENTE",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A3200-OBTENER-ENT-REMITENTE."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A3300-CABECERA-LISTADO",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A3300-CABECERA-LISTADO"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A9100-ROLLBACK",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A9100-ROLLBACK"
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A1700-CERRAR-CURSOR-PEND",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A1700-CERRAR-CURSOR-PEND."
+      },
+      {
+        "type": "PERFORM_STATEMENT",
+        "perform_type": "SIMPLE",
+        "target": "A8100-ESCRIBIR-ESTADIST",
+        "thru_target": null,
+        "times": null,
+        "until_condition": null,
+        "varying_clause": null,
+        "raw": "PERFORM A8100-ESCRIBIR-ESTADIST."
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "1000-INICIO"
+        },
+        "raw": "PERFORM 1000-INICIO.",
+        "line_number": null
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "2000-PROCESO UNTIL NO-ENCONTRADO"
+        },
+        "raw": "PERFORM 2000-PROCESO UNTIL NO-ENCONTRADO.",
+        "line_number": null
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "8000-FINAL"
+        },
+        "raw": "PERFORM 8000-FINAL.",
+        "line_number": null
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A1100-OBTENER-HCT"
+        },
+        "raw": "PERFORM A1100-OBTENER-HCT.",
+        "line_number": null,
+        "procedure": "1000-INICIO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A1110-OBTENER-TIMESTAMP-MTO"
+        },
+        "raw": "PERFORM A1110-OBTENER-TIMESTAMP-MTO.",
+        "line_number": null,
+        "procedure": "1000-INICIO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A1200-ABRIR-CURSOR-EXTR"
+        },
+        "raw": "PERFORM A1200-ABRIR-CURSOR-EXTR.",
+        "line_number": null,
+        "procedure": "1000-INICIO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A1300-LEER-EXTRAIDOS"
+        },
+        "raw": "PERFORM A1300-LEER-EXTRAIDOS.",
+        "line_number": null,
+        "procedure": "1000-INICIO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A3000-OBTENER-LISTADO"
+        },
+        "raw": "PERFORM A3000-OBTENER-LISTADO",
+        "line_number": null,
+        "procedure": "1000-INICIO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A1800-OBTENER-CABE-ESTAD"
+        },
+        "raw": "PERFORM A1800-OBTENER-CABE-ESTAD.",
+        "line_number": null,
+        "procedure": "1000-INICIO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A1400-CERRAR-CURSOR-EXTR"
+        },
+        "raw": "PERFORM A1400-CERRAR-CURSOR-EXTR.",
+        "line_number": null,
+        "procedure": "1000-INICIO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A1450-OBTIENE-RANGO"
+        },
+        "raw": "PERFORM A1450-OBTIENE-RANGO.",
+        "line_number": null,
+        "procedure": "1000-INICIO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A1500-ABRIR-CURSOR-PEND"
+        },
+        "raw": "PERFORM A1500-ABRIR-CURSOR-PEND.",
+        "line_number": null,
+        "procedure": "1000-INICIO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A1600-LEER-PENDIENTES"
+        },
+        "raw": "PERFORM A1600-LEER-PENDIENTES.",
+        "line_number": null,
+        "procedure": "1000-INICIO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A9100-ROLLBACK"
+        },
+        "raw": "PERFORM A9100-ROLLBACK",
+        "line_number": null,
+        "procedure": "A1600-LEER-PENDIENTES"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A9100-ROLLBACK"
+        },
+        "raw": "PERFORM A9100-ROLLBACK",
+        "line_number": null,
+        "procedure": "A1700-CERRAR-CURSOR-PEND"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A3100-OBTENER-DESC-EMPRESA"
+        },
+        "raw": "PERFORM A3100-OBTENER-DESC-EMPRESA.",
+        "line_number": null,
+        "procedure": "A1800-OBTENER-CABE-ESTAD"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A2500-ACTUAL-ESTADO-INCID"
+        },
+        "raw": "PERFORM A2500-ACTUAL-ESTADO-INCID",
+        "line_number": null,
+        "procedure": "2000-PROCESO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A2100-FORMATEAR-OBS20007"
+        },
+        "raw": "PERFORM A2100-FORMATEAR-OBS20007",
+        "line_number": null,
+        "procedure": "2000-PROCESO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A9100-ROLLBACK"
+        },
+        "raw": "PERFORM A9100-ROLLBACK",
+        "line_number": null,
+        "procedure": "2000-PROCESO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A2200-FORMATEAR-CAS10010"
+        },
+        "raw": "PERFORM A2200-FORMATEAR-CAS10010",
+        "line_number": null,
+        "procedure": "2000-PROCESO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A9100-ROLLBACK"
+        },
+        "raw": "PERFORM A9100-ROLLBACK",
+        "line_number": null,
+        "procedure": "2000-PROCESO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A2300-GRABAR-RAD"
+        },
+        "raw": "PERFORM A2300-GRABAR-RAD",
+        "line_number": null,
+        "procedure": "2000-PROCESO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A2400-GENERAR-PROTESTO"
+        },
+        "raw": "PERFORM A2400-GENERAR-PROTESTO",
+        "line_number": null,
+        "procedure": "2000-PROCESO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A2550-CONSULTAR-ESTADO-CHEQUE"
+        },
+        "raw": "PERFORM A2550-CONSULTAR-ESTADO-CHEQUE",
+        "line_number": null,
+        "procedure": "2000-PROCESO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A2600-ACTUALIZA-ESTADO-CHEQUE"
+        },
+        "raw": "PERFORM A2600-ACTUALIZA-ESTADO-CHEQUE",
+        "line_number": null,
+        "procedure": "2000-PROCESO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A9100-ROLLBACK"
+        },
+        "raw": "PERFORM A9100-ROLLBACK",
+        "line_number": null,
+        "procedure": "2000-PROCESO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A1600-LEER-PENDIENTES"
+        },
+        "raw": "PERFORM A1600-LEER-PENDIENTES.",
+        "line_number": null,
+        "procedure": "2000-PROCESO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A9100-ROLLBACK"
+        },
+        "raw": "PERFORM A9100-ROLLBACK",
+        "line_number": null,
+        "procedure": "A2150-LEER-FECHA-DEVOL"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A2150-LEER-FECHA-DEVOL"
+        },
+        "raw": "PERFORM A2150-LEER-FECHA-DEVOL",
+        "line_number": null,
+        "procedure": "A2200-FORMATEAR-CAS10010"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A9100-ROLLBACK"
+        },
+        "raw": "PERFORM A9100-ROLLBACK",
+        "line_number": null,
+        "procedure": "A2300-GRABAR-RAD"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "2410-OBTENGO-USU-CONSI"
+        },
+        "raw": "PERFORM 2410-OBTENGO-USU-CONSI",
+        "line_number": null,
+        "procedure": "A2400-GENERAR-PROTESTO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A9100-ROLLBACK"
+        },
+        "raw": "PERFORM A9100-ROLLBACK",
+        "line_number": null,
+        "procedure": "A2400-GENERAR-PROTESTO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A2610-OBT-COD-PRIM-SEC"
+        },
+        "raw": "PERFORM A2610-OBT-COD-PRIM-SEC.",
+        "line_number": null,
+        "procedure": "A2550-CONSULTAR-ESTADO-CHEQUE"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A2551-OBT-DIG-CONTR-CH"
+        },
+        "raw": "PERFORM A2551-OBT-DIG-CONTR-CH.",
+        "line_number": null,
+        "procedure": "A2550-CONSULTAR-ESTADO-CHEQUE"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A9100-ROLLBACK"
+        },
+        "raw": "PERFORM A9100-ROLLBACK",
+        "line_number": null,
+        "procedure": "A2550-CONSULTAR-ESTADO-CHEQUE"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A9100-ROLLBACK"
+        },
+        "raw": "PERFORM A9100-ROLLBACK",
+        "line_number": null,
+        "procedure": "A2551-OBT-DIG-CONTR-CH"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A2620-OBT-TIMESTAMP-CTA"
+        },
+        "raw": "PERFORM A2620-OBT-TIMESTAMP-CTA",
+        "line_number": null,
+        "procedure": "A2600-ACTUALIZA-ESTADO-CHEQUE"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A9100-ROLLBACK"
+        },
+        "raw": "PERFORM A9100-ROLLBACK",
+        "line_number": null,
+        "procedure": "A2600-ACTUALIZA-ESTADO-CHEQUE"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A9100-ROLLBACK"
+        },
+        "raw": "PERFORM A9100-ROLLBACK",
+        "line_number": null,
+        "procedure": "A2610-OBT-COD-PRIM-SEC"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A9100-ROLLBACK"
+        },
+        "raw": "PERFORM A9100-ROLLBACK",
+        "line_number": null,
+        "procedure": "A2620-OBT-TIMESTAMP-CTA"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A3100-OBTENER-DESC-EMPRESA"
+        },
+        "raw": "PERFORM A3100-OBTENER-DESC-EMPRESA.",
+        "line_number": null,
+        "procedure": "A3000-OBTENER-LISTADO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A3200-OBTENER-ENT-REMITENTE"
+        },
+        "raw": "PERFORM A3200-OBTENER-ENT-REMITENTE.",
+        "line_number": null,
+        "procedure": "A3000-OBTENER-LISTADO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A3300-CABECERA-LISTADO"
+        },
+        "raw": "PERFORM A3300-CABECERA-LISTADO",
+        "line_number": null,
+        "procedure": "A3000-OBTENER-LISTADO"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A9100-ROLLBACK"
+        },
+        "raw": "PERFORM A9100-ROLLBACK",
+        "line_number": null,
+        "procedure": "A3100-OBTENER-DESC-EMPRESA"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A9100-ROLLBACK"
+        },
+        "raw": "PERFORM A9100-ROLLBACK",
+        "line_number": null,
+        "procedure": "A3200-OBTENER-ENT-REMITENTE"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A1700-CERRAR-CURSOR-PEND"
+        },
+        "raw": "PERFORM A1700-CERRAR-CURSOR-PEND.",
+        "line_number": null,
+        "procedure": "8000-FINAL"
+      },
+      {
+        "type": "COBOL_STATEMENT",
+        "statement_type": "PERFORM",
+        "details": {
+          "target": "A8100-ESCRIBIR-ESTADIST"
+        },
+        "raw": "PERFORM A8100-ESCRIBIR-ESTADIST.",
+        "line_number": null,
+        "procedure": "8000-FINAL"
+      }
+    ],
+    "procedure_division_raw": "PROCEDURE DIVISION.\n\n* *INICIO-PROGRAMA-CAB1040\nPERFORM 1000-INICIO.\nPERFORM 2000-PROCESO UNTIL NO-ENCONTRADO.\nPERFORM 8000-FINAL.\n* *FINAL-PROGRAMA-CAB1040\n\n\n* ***************************************************************\n* *  1000-INICIO.                                              **\n* *------------------------------------------------------------**\n* * -El control de los errores de DB2 se pasa a la aplicacion. **\n* * -El control de los servicios  se pasa a la aplicacion.     **\n* * -Se incrementa el numero de mensaje y se inicializa el     **\n* *     identificador de la operacion.                         **\n* * -Se inicializa el numero de nodo.                          **\n* * -Se abre listado de estadisticas.                          **\n* * -Se inicializa la aqbf y variables de entorno.             **\n* * -Se obtiene el HTC y el TIMESTAMP del momento del lanza-   **\n* *     miento de la cadena. si el timestamp del momento es    **\n* *     mayor que el HTC, se para el proceso.                  **\n* * -Se llama al servico de obtencion de parametros para recu- **\n* *     perar en centro de compensacion.                       **\n* * -Se abren cursores.                                        **\n* * -Se comprueba si en la tabla de incidencias hay cheques    **\n* *     extraidos. si es asi, se genera un listado de errores  **\n* *     y se para el proceso hasta que acabe el lanzador.      **\n* * -Se leen todos los cheques que esten pendientes o vencidos **\n* *     pendientes y se tratan.                                **\n* ***************************************************************\n1000-INICIO.\n\nINITIALIZE RETURN-CODE.\n* ----> Anulacion del control de errores de DB2\n@DEFINE(NO-ERROSQL).\n\n* ----> Gestionar errores de servicios invocados\n@CTRLERR(APLICACION).\n\n* --  -- Se obtiene la fecha de proceso\nEXEC SQL\nSELECT TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')\nINTO :WS-FECHA-PROC\nFROM DUAL\nEND-EXEC.\ndisplay 'CAB1040 -fecha-proc ' WS-FECHA-PROC\n\n\n@INIBAT()\n\nIF TIPO-ERROR OF S21-AREA-ERROR > ZEROS\nSET PROCESO-ERROR       TO TRUE\nMOVE NUM-ERROR OF S21-AREA-ERROR TO WS-ERROR\n@LOGERR(ERROR,WS-ERROR,LT-ERR-GXINIBAT)\nEND-IF.\n\n\n* ----> Inicializacion de Numnodo para la grabacion en RAD\n@ININODO()\n\nIF  TIPO-ERROR OF S21-AREA-ERROR NOT = ZEROS\nMOVE LT-A-PARRAFO1000  TO WS-PARRAFO\nMOVE LT-ERROR-AQININOD TO WS-TEXTO\nMOVE NUM-ERROR OF S21-AREA-ERROR TO WS-ERROR\n@ERROR(ERROR,WS-ERROR,AREA-INFORMACION)\nEND-IF.\n\nEXEC SQL\nCOMMIT\nEND-EXEC.\n\nMOVE ZEROS TO WS-CONT-LEIDOS\nWS-CONT-MODIFI.\n\n* ----> Se abre listado de estadisticas.\nOPEN OUTPUT  IMPRES01.\n\nMOVE COD-EMPRESA  OF S21-AREA-ENTORNO TO WS-COD-EMPRESA.\nMOVE COD-CENTRO   OF S21-AREA-ENTORNO TO WS-COD-CENTRO.\nMOVE FEM-CONTABLE OF S21-AREA-ENTORNO TO WS-FEM-CONTABLE.\nMOVE FEM-MAQUINA  OF S21-AREA-ENTORNO TO WS-FEM-MAQUINA.\n\n\n* --  -Espacios a la variable de control de cambio de centro\n* --  -origen del intercambio (el centro gestor de la camara donde\n* --  -se recibio el cheque).\nMOVE SPACES       TO WS-CENTRO.\n\nMOVE FEM-MAQUINA          OF S21-AREA-ENTORNO\nTO FEM-OPERACION        OF S21-AREA-ENTORNO.\n\nMOVE FEM-MAQUINA          OF S21-AREA-ENTORNO\nTO WS-FEM-HOY.\n\nMOVE WS-A-PROGRAMA\nTO COD-USUARIO          OF S21-AREA-ENTORNO.\n\n* ----> Se obtiene el HCT y el timestamp del momento\nPERFORM A1100-OBTENER-HCT.\n\nPERFORM A1110-OBTENER-TIMESTAMP-MTO.\n\n*      IF WS-TIMESTAMPSIGLO2 > WS-TIMESTAMPSIGLO3\n\n*          MOVE LT-A-PARRAFO1000 TO WS-PARRAFO\n\n*          MOVE HOR-GENERICA     OF MSG-OUT-PAS43001(1)\n*            TO LT-ERROR-HORA-N\n\n*          MOVE LT-ERROR-LANZAMIENTO TO WS-TEXTO\n*          SET  LT-NO-HORA-CIERRE    TO TRUE\n*          @ERROR(ERROR,WS-PA-NUM-ERROR,AREA-INFORMACION)\n*      END-IF.\n\n* ----> Se formatea el mensaje de entrada de PAS43001\n* ----> para obtener el centro de compensacion\nMOVE 'V'\nTO ACC-SERV             OF MSG-IN-PAS43001.\n\nMOVE '0'\nTO IND-TIPO-LIS         OF MSG-IN-PAS43001.\n\nMOVE LT-20\nTO COD-SUBSIS           OF MSG-IN-PAS43001.\n\nMOVE 4\nTO NUM-PARAM            OF MSG-IN-PAS43001.\n\nMOVE COD-EMPRESA          OF S21-AREA-ENTORNO\nTO COD-EMPRESA          OF MSG-IN-PAS43001.\n\n\n@INVOCAR(PAS43001,B)\n\nMOVE NUMERO               OF MSG-OUT-PAS43001(1)\nTO NUMERO-NUM.\n\nMOVE WS-NUMERO-NUM        TO WS-COD-CENT-COMP.\n\nPERFORM A1200-ABRIR-CURSOR-EXTR.\n\nPERFORM A1300-LEER-EXTRAIDOS.\n\n* ----> Si existe algun registro en el cursor significa que hay\n* ----> alguna incidencia que se esta preocesando por el lanzador\n* ----> de operaciones y no se debe continuar con la ejecucion de\n* ----> este proceso.\n\nEVALUATE TRUE\n\nWHEN IND-SQL-CORRECTO\nIF COD-EMPRESA OF T12INC06 = COD-EMPRESA OF\nS21-AREA-ENTORNO\n\nMOVE LT-ENCONTRADO      TO CODIGO\nMOVE LT-ERROR-INTER1    TO DESC-ERROR1\nMOVE LT-ERROR-INTER2    TO DESC-ERROR2\nPERFORM A3000-OBTENER-LISTADO\nMOVE LT-A-PARRAFO1300   TO WS-PARRAFO\nMOVE LT-ERROR-EXTRAIDOS TO WS-TEXTO\n@ERROR(ERROR,00999,AREA-INFORMACION)\nEND-IF\n\nWHEN IND-NO-ENCONTRADO\nCONTINUE\n\nWHEN OTHER\nMOVE LT-A-PARRAFO1300   TO WS-PARRAFO\nMOVE LT-ERROR-EXTRAIDOS TO WS-TEXTO\n@ERROR(ERROR,SQLCODE,AREA-INFORMACION)\n\nEND-EVALUATE.\n\nPERFORM A1800-OBTENER-CABE-ESTAD.\n\nPERFORM A1400-CERRAR-CURSOR-EXTR.\n\nPERFORM A1450-OBTIENE-RANGO.\n\nPERFORM A1500-ABRIR-CURSOR-PEND.\n\nPERFORM A1600-LEER-PENDIENTES.\n\nMOVE COD-CENT-ORIG    OF T12INC06\nTO COD-CENTRO       OF S21-AREA-ENTORNO.\n\n\n* --------------------------------------------------------------*\n*  -SE LLAMA AL SERVICIO DE OBTENCION DE PARAMETROS PARA RECU-  *\n*   PERAR LA HORA GENRICA.                                      *\n*  -SE FORMATEA EL TIMESTAMPSIGLO2 A PARTIR DE LA FECHA DEL DIA *\n*   Y DE LA HORA GENERICA OBTENIDA EN EL SERVICIO PAS43001.     *\n*  -EL VALOR OBTENIDO SE GUARDA EN LA VARIABLE HOST WS-TIMESTAMP*\n*   SIGLO2.                                                     *\n* --------------------------------------------------------------*\nA1100-OBTENER-HCT.\n\n* ----->Se obtiene la hora generica de cierre del truncamiento\nMOVE 'V'\nTO ACC-SERV             OF MSG-IN-PAS43001.\n\nMOVE '0'\nTO IND-TIPO-LIS         OF MSG-IN-PAS43001.\n\nMOVE COD-EMPRESA          OF S21-AREA-ENTORNO\nTO COD-EMPRESA          OF MSG-IN-PAS43001.\n\nMOVE LT-CA\nTO COD-SUBSIS           OF MSG-IN-PAS43001.\n\nMOVE 1\nTO NUM-PARAM            OF MSG-IN-PAS43001.\n\n\n@INVOCAR(PAS43001,B)\n\nIF  TIPO-ERROR OF S21-AREA-ERROR NOT = ZEROS\nMOVE LT-A-PARRAFO1100    TO WS-PARRAFO\nMOVE LT-ERROR-PARAM-HORA TO WS-TEXTO\n@ERROR(ERROR,,AREA-INFORMACION)\nEND-IF.\n\n* ----> Se formatea el timestamp.\nMOVE FEM-MAQUINA          OF S21-AREA-ENTORNO\nTO FECHA-DMA.\n\nMOVE DIA-DMA              TO DIA.\nMOVE MES-DMA              TO MES.\nMOVE ANNO-DMA             TO ANNO.\n\nMOVE HOR-GENERICA         OF MSG-OUT-PAS43001(1)\nTO HORA-AUX-2.\ndisplay 'CAB1040 PAS43001 HORA '\nHOR-GENERICA OF MSG-OUT-PAS43001(1)\n\nMOVE HORA-2    OF HORA-AUX-2 TO HORA    OF HORA-AUX.\nMOVE MINUTO-2  OF HORA-AUX-2 TO MINUTO  OF HORA-AUX.\nMOVE SEGUNDO-2 OF HORA-AUX-2 TO SEGUNDO OF HORA-AUX.\n\nMOVE ZEROS     TO TIMESTAMP-RESTO.\nMOVE TIMESTAMP-AUX        TO WS-TIMESTAMPSIGLO2.\n\n\n* --------------------------------------------------------------*\n*  -SE FORMATEA TIMESTAMP-HOY CON LA FECHA DEL DIA Y LA HORA DE *\n*      EJECUCION DE LA CADENA.                                  *\n* --------------------------------------------------------------*\nA1110-OBTENER-TIMESTAMP-MTO.\n\nMOVE FEM-MAQUINA          OF S21-AREA-ENTORNO\nTO FECHA-DMA.\n\nMOVE DIA-DMA              TO DIA-HOY.\nMOVE MES-DMA              TO MES-HOY.\nMOVE ANNO-DMA             TO ANNO-HOY.\n\nMOVE HOR-MAQUINA          OF S21-AREA-ENTORNO\nTO WS-TIEMPO.\n\nMOVE WS-HORA              TO HORA-HOY.\nMOVE WS-MINUTOS           TO MINUTO-HOY.\nMOVE WS-SEGUNDOS          TO SEGUNDO-HOY.\n\nMOVE WS-TIMESTAMP-HOY     TO WS-TIMESTAMPSIGLO3.\n\n\n* ***************************************************************\n* * SE ABRE CURSOR DE EXTRAIDOS                                **\n* ***************************************************************\nA1200-ABRIR-CURSOR-EXTR.\n\nMOVE LT-N-14  TO WS-COD-INCID.\nMOVE LT-N-16  TO WS-COD-INCID1.\n\nEXEC SQL\nOPEN CURSOR-EXTR\nEND-EXEC.\n\nMOVE SQLSTATE TO SQLSTATE-SIGLO.\ndisplay 'A1200 RC-OPN-CUR-EXTR ' SQLCODE ' ' SQLSTATE\n\nIF NOT IND-SQL-CORRECTO\nMOVE LT-ERR-OPEN-CURSOR-EXTR TO WS-TEXTO\nMOVE LT-A-PARRAFO1200        TO WS-PARRAFO\n@ERROR(ERROR,SQLCODE,AREA-INFORMACION)\nEND-IF.\n\n\n* ***************************************************************\n* * SE LEEN LOS REGISTROS EXTRAIDOS                            **\n* ***************************************************************\nA1300-LEER-EXTRAIDOS.\n\nEXEC SQL\nFETCH CURSOR-EXTR\nINTO\n:T12INC06.COD-CENT-DEST,\n:T12INC06.NUM-INCID,\n:T12INC06.NUM-TRASP-INCID,\n:T12INC06.NUM-SEC-PP,\n:T12INC06.COD-EMPRESA,\n:T12INC06.COD-INCID,\n:T12INC06.FEC-VENCIMIENTO,\n:T12INC06.HOR-VTO,\n:T12INC06.FEC-OPERACION,\n:T12INC06.FEC-VALOR,\n:T12INC06.CLA-INCID,\n:T12INC06.IMP-MOVIMIENTO,\n:T12INC06.IMP-PENDIENTE,\n:T12INC06.IND-NATURALEZA,\n:T12INC06.DEL-CONCEPTO,\n:T12INC06.COD-REFER,\n:T12INC06.COD-PROCED,\n:T12INC06.COD-EMPOR,\n:T12INC06.COD-CENT-ORIG,\n:T12INC06.COD-CENTRO,\n:T12INC06.COD-ENTIDAD,\n:T12INC06.COD-SUCURSAL,\n:T12INC06.COD-DIG-CONTROL,\n:T12INC06.NUM-CTA,\n:T12INC06.COD-EST-INCID,\n:T12INC06.COD-MONEDA,\n:T12INC06.IND-EXIS-DOC,\n:T12INC06.IND-DEV-AUTO,\n:T12INC06.IND-AVISO,\n:T12INC06.IND-REINT,\n:T12INC06.COD-EMIS-DOM,\n:T12INC06.DEL-EMIS-DOMIC,\n:T12INC06.FEC-EMISION,\n:T12INC06.COD-REF-ABON,\n:T12INC06.COD-ENT-DOM,\n:T12INC06.COD-SUC-DOM,\n:T12INC06.COD-CLA-DOM,\n:T12INC06.NUM-CTA-DOM,\n:T12INC06.NOM-LOCALIDAD,\n:T12INC06.NUM-SEC-EMIS,\n:T12INC06.NOM-COMPACTADO,\n:T12INC06.NUM-SICA,\n:T12INC06.COD-ENT-SICA,\n:T12INC06.DEC-SUCURSAL,\n:T12INC06.ORDENANTE-MOVIMIEN,\n:T12INC06.BENEFICIARIO-MOVIM,\n:T12INC06.TXT-BENEF,\n:T12INC06.NUMERO-DOCUMENTO,\n:T12INC06.COD-REF-DOC,\n:T12INC06.FEC-RESOL,\n:T12INC06.COD-DOMINIO,\n:T12INC06.NUM-NODO,\n:T12INC06.NUM-MENSAJE,\n:T12INC06.COD-USUARIO-RES,\n:T12INC06.HOR-RESOL,\n:T12INC06.COD-RESOL,\n:T12INC06.DEL-CONCEPTO2,\n:T12INC06.FEC-VALOR2,\n:T12INC06.COD-REFERENCIA2,\n:T12INC06.COD-NUM-DOC-OFICIA,\n:T12INC06.COD-LETRA-NIF,\n:T12INC06.COD-CENT-FTRAS,\n:T12INC06.COD-ENT-CT-RES,\n:T12INC06.COD-SUC-CT-RES,\n:T12INC06.COD-CLV-RESOL,\n:T12INC06.NUM-CTA-RES,\n:T12INC06.IMP-RESOL,\n:T12INC06.CLA-RESOL,\n:T12INC06.IND-RETRO-INC,\n:T12INC06.COD-OPER-ENC,\n:T12INC06.TIMESTAMP-SIGLO,\n:T12INC06.IND-MOD-TABLA,\n:T12INC06.IMP-MOVTO-ORIG,\n:T12INC06.D-IMP-MOVTO-ORIG,\n:T12INC06.F-IMP-MOVTO-ORIG,\n:T12INC06.T-IMP-MOVTO-ORIG,\n:T12INC06.C-IMP-MOVTO-ORIG,\n:T12INC06.TIPCTA,\n:T12INC06.NUM-CT-CONT-CREA,\n:T12INC06.COD-CENTIM,\n:T12INC06.NUM-CT-CONT-RESOL,\n:T12INC06.COD-CENTIM1,\n:T12INC06.COD-DOMINIO2,\n:T12INC06.NUM-NODO2,\n:T12INC06.NUM-MENSAJE2,\n:T12INC06.COD-USU-ALTA,\n:T12INC06.D-IMP-RESOL,\n:T12INC06.F-IMP-RESOL,\n:T12INC06.T-IMP-RESOL,\n:T12INC06.C-IMP-RESOL\nEND-EXEC.\n\nMOVE SQLSTATE TO SQLSTATE-SIGLO.\ndisplay 'A1300-Fecth code: ' SQLCODE  ' ' SQLSTATE.\n\n\n* ***************************************************************\n* * SE CIERRA CURSOR DE EXTRAIDOS                              **\n* ***************************************************************\nA1400-CERRAR-CURSOR-EXTR.\n\nEXEC SQL\nCLOSE CURSOR-EXTR\nEND-EXEC.\n\nMOVE SQLSTATE TO SQLSTATE-SIGLO.\ndisplay 'A1400 RC-CLS-CUR-EXTR ' SQLCODE ' ' SQLSTATE.\n\nIF NOT IND-SQL-CORRECTO\nMOVE LT-ERR-CLOSE-CURSOR-EXTR TO WS-TEXTO\nMOVE LT-A-PARRAFO1400         TO WS-PARRAFO\n@ERROR(ERROR,SQLCODE,AREA-INFORMACION)\nEND-IF.\n\n\n* ***************************************************************\n* * Se obtiene rango de ejecución                              **\n* ***************************************************************\nA1450-OBTIENE-RANGO.\nOPEN INPUT FICCON01.\nIF FS-FIC01 NOT EQUAL '00'\nSTRING 'ERR EN FICCON FS: '\nFS-FIC01\nDELIMITED BY SIZE\nINTO WS-TEXTO\nMOVE 8 TO RETURN-CODE\nMOVE 'A1450-OBTIENE-RANGOS '  TO WS-PARRAFO\n@ERROR(ERROR,33445,AREA-INFORMACION)\nEND-IF.\n\nREAD FICCON01 INTO REG-FICCON AT END\nSTRING 'ERR AL LEER FICCON FS: '\nFS-FIC01\nDELIMITED BY SIZE\nINTO WS-TEXTO\nMOVE 8        TO RETURN-CODE\nMOVE 'A1450-OBTIENE-RANGOS '  TO WS-PARRAFO\n@ERROR(ERROR,33446,AREA-INFORMACION)\nEND-READ.\nIF FS-FIC01 NOT EQUAL '00' AND '97'\nSTRING 'ERR AL LEER1 FICCON FS: '\nFS-FIC01\nDELIMITED BY SIZE\nINTO WS-TEXTO\nMOVE 8        TO RETURN-CODE\nMOVE 'A1450-OBTIENE-RANGOS '  TO WS-PARRAFO\n@ERROR(ERROR,33446,AREA-INFORMACION)\nEND-IF.\n\nCLOSE FICCON01.\n\ndisplay 'A1450-Rango recibido: ' WS-RANGO.\n\nEXEC SQL\nSELECT DEL_REGISTRO\nINTO :WS-DEL-REGISTRO\nFROM T06TC002\nWHERE COD_TABLA_ID    = 'CARANGOS'\nAND COD_IDIOMA      = '1'\nAND CODIGO_REGISTRO = :WS-RANGO\nEND-EXEC.\n\nMOVE SQLSTATE TO SQLSTATE-SIGLO.\ndisplay 'A1450-Despues select t06tc002 sql: ' SQLCODE\n' ' SQLSTATE  '  Datos del rango: ' WS-DEL-REGISTRO\n\nIF NOT IND-SQL-CORRECTO\nMOVE 'ERR AL OBTENER RANGOS'  TO WS-TEXTO\nMOVE 'A1450-OBTIENE-RANGOS '  TO WS-PARRAFO\n@ERROR(ERROR,SQLCODE,AREA-INFORMACION)\nEND-IF.\n\n\n* ***************************************************************\n* * SE ABRE CURSOR DE PENDIENTES O VENCIDOS PENDIENTES         **\n* ***************************************************************\nA1500-ABRIR-CURSOR-PEND.\ndisplay 'A1500-Fecha hoy     : ' ws-fem-hoy\n'Cuenta Inicial: ' ws-cuenta-ini\n'Cuenta Final  : ' ws-cuenta-fin\n\nMOVE WS-CUENTA-INI   TO WS-CTA-INI\nMOVE WS-CUENTA-FIN   TO WS-CTA-FIN\n\nMOVE LT-N-14  TO WS-COD-INCID.\nMOVE LT-N-16  TO WS-COD-INCID1.\n\nEXEC SQL\nOPEN CURSOR-PEND\nEND-EXEC.\n\nMOVE SQLSTATE TO SQLSTATE-SIGLO.\ndisplay 'A1500 Open sql: ' SQLCODE ' ' SQLSTATE.\n\nIF NOT IND-SQL-CORRECTO\nMOVE LT-ERR-OPEN-CURSOR-PEND TO WS-TEXTO\nMOVE LT-A-PARRAFO1500         TO WS-PARRAFO\n@ERROR(ERROR,SQLCODE,AREA-INFORMACION)\nEND-IF.\n\n\n* ***************************************************************\n* * SE LEEN LOS REGISTROS PENDIENTES O VENCIDOS PENDIENTES     **\n* ***************************************************************\nA1600-LEER-PENDIENTES.\n\nEXEC SQL\nFETCH CURSOR-PEND\nINTO\n:T12INC06.COD-CENT-DEST,\n:T12INC06.NUM-INCID,\n:T12INC06.NUM-TRASP-INCID,\n:T12INC06.NUM-SEC-PP,\n:T12INC06.COD-EMPRESA,\n:T12INC06.COD-INCID,\n:T12INC06.FEC-VENCIMIENTO,\n:T12INC06.HOR-VTO,\n:T12INC06.FEC-OPERACION,\n:T12INC06.FEC-VALOR,\n:T12INC06.CLA-INCID,\n:T12INC06.IMP-MOVIMIENTO,\n:T12INC06.IMP-PENDIENTE,\n:T12INC06.IND-NATURALEZA,\n:T12INC06.DEL-CONCEPTO,\n:T12INC06.COD-REFER,\n:T12INC06.COD-PROCED,\n:T12INC06.COD-EMPOR,\n:T12INC06.COD-CENT-ORIG,\n:T12INC06.COD-CENTRO,\n:T12INC06.COD-ENTIDAD,\n:T12INC06.COD-SUCURSAL,\n:T12INC06.COD-DIG-CONTROL,\n:T12INC06.NUM-CTA,\n:T12INC06.COD-EST-INCID,\n:T12INC06.COD-MONEDA,\n:T12INC06.IND-EXIS-DOC,\n:T12INC06.IND-DEV-AUTO,\n:T12INC06.IND-AVISO,\n:T12INC06.IND-REINT,\n:T12INC06.COD-EMIS-DOM,\n:T12INC06.DEL-EMIS-DOMIC,\n:T12INC06.FEC-EMISION,\n:T12INC06.COD-REF-ABON,\n:T12INC06.COD-ENT-DOM,\n:T12INC06.COD-SUC-DOM,\n:T12INC06.COD-CLA-DOM,\n:T12INC06.NUM-CTA-DOM,\n:T12INC06.NOM-LOCALIDAD,\n:T12INC06.NUM-SEC-EMIS,\n:T12INC06.NOM-COMPACTADO,\n:T12INC06.NUM-SICA,\n:T12INC06.COD-ENT-SICA,\n:T12INC06.DEC-SUCURSAL,\n:T12INC06.ORDENANTE-MOVIMIEN,\n:T12INC06.BENEFICIARIO-MOVIM,\n:T12INC06.TXT-BENEF,\n:T12INC06.NUMERO-DOCUMENTO,\n:T12INC06.COD-REF-DOC,\n:T12INC06.FEC-RESOL,\n:T12INC06.COD-DOMINIO,\n:T12INC06.NUM-NODO,\n:T12INC06.NUM-MENSAJE,\n:T12INC06.COD-USUARIO-RES,\n:T12INC06.HOR-RESOL,\n:T12INC06.COD-RESOL,\n:T12INC06.DEL-CONCEPTO2,\n:T12INC06.FEC-VALOR2,\n:T12INC06.COD-REFERENCIA2,\n:T12INC06.COD-NUM-DOC-OFICIA,\n:T12INC06.COD-LETRA-NIF,\n:T12INC06.COD-CENT-FTRAS,\n:T12INC06.COD-ENT-CT-RES,\n:T12INC06.COD-SUC-CT-RES,\n:T12INC06.COD-CLV-RESOL,\n:T12INC06.NUM-CTA-RES,\n:T12INC06.IMP-RESOL,\n:T12INC06.CLA-RESOL,\n:T12INC06.IND-RETRO-INC,\n:T12INC06.COD-OPER-ENC,\n:T12INC06.TIMESTAMP-SIGLO,\n:T12INC06.IND-MOD-TABLA,\n:T12INC06.IMP-MOVTO-ORIG,\n:T12INC06.D-IMP-MOVTO-ORIG,\n:T12INC06.F-IMP-MOVTO-ORIG,\n:T12INC06.T-IMP-MOVTO-ORIG,\n:T12INC06.C-IMP-MOVTO-ORIG,\n:T12INC06.TIPCTA,\n:T12INC06.NUM-CT-CONT-CREA,\n:T12INC06.COD-CENTIM,\n:T12INC06.NUM-CT-CONT-RESOL,\n:T12INC06.COD-CENTIM1,\n:T12INC06.COD-DOMINIO2,\n:T12INC06.NUM-NODO2,\n:T12INC06.NUM-MENSAJE2,\n:T12INC06.COD-USU-ALTA,\n:T12INC06.D-IMP-RESOL,\n:T12INC06.F-IMP-RESOL,\n:T12INC06.T-IMP-RESOL,\n:T12INC06.C-IMP-RESOL\nEND-EXEC.\n\nMOVE SQLSTATE  TO SQLSTATE-SIGLO.\ndisplay 'A1600 RC-CUR-INC ' SQLCODE ' ' SQLSTATE\n\nEVALUATE TRUE\nWHEN IND-NO-ENCONTRADO\nSET NO-ENCONTRADO TO TRUE\n\nWHEN IND-SQL-CORRECTO\nADD 1 TO WS-CONT-LEIDOS\n\nWHEN OTHER\nMOVE LT-A-PARRAFO1600     TO WS-PARRAFO\nMOVE LT-ERROR-PENDIENTES  TO WS-TEXTO\n@LOGERR(ERROR,LT-N-21016,AREA-INFORMACION)\nPERFORM A9100-ROLLBACK\n@ERROR(ERROR,SQLCODE,AREA-INFORMACION)\nEND-EVALUATE.\n\n\n* ***************************************************************\n* * SE CIERRA CURSOR DE PENDIENTES                             **\n* ***************************************************************\nA1700-CERRAR-CURSOR-PEND.\n\nEXEC SQL\nCLOSE CURSOR-PEND\nEND-EXEC.\n\nMOVE SQLSTATE  TO SQLSTATE-SIGLO.\ndisplay 'A1700 RC-CUR-INC ' SQLCODE ' ' SQLSTATE\n\nIF  NOT IND-SQL-CORRECTO\nMOVE LT-ERR-CLOSE-CURSOR-PEND TO WS-TEXTO\nMOVE LT-A-PARRAFO1700         TO WS-PARRAFO\n@LOGERR(ERROR,LT-N-21016,AREA-INFORMACION)\nPERFORM A9100-ROLLBACK\n@ERROR(ERROR,SQLCODE,AREA-INFORMACION)\nEND-IF.\n\n\n* ***************************************************************\n* * SE FORMATEA LA CABECERA DEL LISTADO DE ESTADISTICAS        **\n* ***************************************************************\nA1800-OBTENER-CABE-ESTAD.\n\nMOVE FEM-MAQUINA          OF S21-AREA-ENTORNO\nTO DATUM                OF CABE-2E.\n\nMOVE HOR-MAQUINA          OF S21-AREA-ENTORNO\nTO WS-TIEMPO.\n\nMOVE WS-HORA              TO HOURS   OF CABE-3E.\nMOVE WS-MINUTOS           TO MINUTES OF CABE-3E.\nMOVE WS-SEGUNDOS          TO SECONDS OF CABE-3E.\n\n* ----> Se obtiene la empresa y su descripcion.\nPERFORM A3100-OBTENER-DESC-EMPRESA.\n\nMOVE NOMBRE               OF TL-T06TC005(1)\nTO ENTIDAD-A.\n\nMOVE WS-COD-EMPRESA       TO ENTIDAD-N.\n\n* ----> Se llama al servicio TCS07002 para obtener la descripcion\n* ----> del centro\nMOVE 'V'\nTO ACC-SERV             OF MSG-IN-TCS07002.\n\nMOVE '0'\nTO IND-TIPO-LIS         OF MSG-IN-TCS07002.\n\nMOVE 1\nTO NUM-CLAVE            OF MSG-IN-TCS07002.\n\nMOVE COD-EMPRESA          OF S21-AREA-ENTORNO\nTO COD-EMPRESA          OF MSG-IN-TCS07002.\n\nMOVE WS-COD-CENTRO\nTO COD-CENTRO           OF MSG-IN-TCS07002.\n\n\n@INVOCAR(TCS07002,C)\n\ndisplay 'A1800 RC-TCS07002 ' NUM-ERROR OF S21-AREA-ERROR\nTIPO-ERROR OF S21-AREA-ERROR NOT EQUAL ZEROS\nMOVE LT-A-PARRAFO1300  TO WS-PARRAFO\nMOVE LT-ERROR-CENTRO   TO WS-TEXTO\n@ERROR(ERROR,,AREA-INFORMACION)\nEND-IF.\n\nMOVE WS-COD-CENTRO\nTO CENTRO-N             OF CABE-4E.\n\nMOVE NOMBRE               OF MSG-OUT-TCS07002(1)\nTO CENTRO-A             OF CABE-4E.\n\n\n* ***************************************************************\n* * -SE LLAMA AL SERVICIO DE MODIFICACION DE UN REGISTRO DE IN-**\n* *     CIDENCIA (OBS20007).                                   **\n* * -SE GRABA EN RAD                                           **\n* * -SE LEE SIGUIENTE REGISTRO DE LA TABLA DE INCIDENCIAS      **\n* ***************************************************************\n2000-PROCESO.\ndisplay '2000 -PROCESO '.\n* ----> Se comprueba que el codigo de empresa leido de T12INC06\n* ----> es igual al de la AQBF en vez de seleccionar registros\n* ----> de la tabla con cod-empresa = aqbf-cod-empresa para evitar\n* ----> tablespace scan y multiple index scan.\n\nMOVE WS-A-PROGRAMA        TO COD-USUARIO OF S21-AREA-ENTORNO.\n\nIF COD-EMPRESA OF T12INC06 = COD-EMPRESA OF S21-AREA-ENTORNO\n\n* ---    -> Se obtiene en nuevo numero de operacion por cada\n* ---    -> cheque que debe ser devuelto\n@NUEVAOPE()\n\nIF  TIPO-ERROR OF S21-AREA-ERROR NOT = ZEROS\nMOVE LT-A-PARRAFO2000  TO WS-PARRAFO\nMOVE LT-ERROR-AQNUEOPE TO WS-TEXTO\n@ERROR(ERROR,,AREA-INFORMACION)\nEND-IF\n\nIF  COD-CENT-ORIG OF T12INC06 NOT EQUAL WS-CENTRO\n* --         -El centro origen del intercambio (el responsable de\n* --         -la camara que recibio el cheque) se toma como centro\n* --         -origen y de imputacion para realizar la contabilidad.\nMOVE COD-CENT-ORIG OF T12INC06\nTO COD-CENTRO OF S21-AREA-ENTORNO\nWS-CENTRO\nEND-IF\n\n*  VR-2003-05-20-I-Obtiene ultimo usuario que tomo accion\nPERFORM A2500-ACTUAL-ESTADO-INCID\n*  VR-2003-05-20-F-Obtiene ultimo usuario que tomo accion\n\nPERFORM A2100-FORMATEAR-OBS20007\n\n@INVOCAR(OBS20007,C)\n\ndisplay '2000 RC-OBS20007 ' NUM-ERROR OF S21-AREA-ERROR\nTIPO-ERROR OF S21-AREA-ERROR NOT = ZEROS\nPERFORM A9100-ROLLBACK\n@ERROR(ERROR,)\nEND-IF\n\nPERFORM A2200-FORMATEAR-CAS10010\n\n* -->     CAMBIO TEMPORAL POR ERROR EN DATOS EN CAS10010\n* --      ERROR 8192\n*          IF NUM-CTA-DOM OF T12INC06 EQUAL 4902311\n*             CONTINUE\n*          ELSE\n\n@INVOCAR(CAS10010,B)\n\ndisplay '2000 -RC-CAS10010 '\nUM-ERROR OF S21-AREA-ERROR\nTIPO-ERROR OF S21-AREA-ERROR NOT = ZEROS\nPERFORM A9100-ROLLBACK\n@ERROR(ERROR,)\nEND-IF\n*          END-IF\n\nADD 1 TO WS-CONT-MODIFI\nPERFORM A2300-GRABAR-RAD\n\nIF  DEL-CONCEPTO OF T12INC06 = LT-SALDO-INSUF  OR\nTXT-BENEF OF T12INC06 (1:2) = LT-MOT-FONDOS-INSUF\n*             DISPLAY 'Informar Protesto'\nPERFORM A2400-GENERAR-PROTESTO\n* DEBUG: -IF\n\n* --  FSALAZAR 28/01/2009. Homologar BP, consideracion CHQS....\n* --  JHTORRES 01.06.2005 Cambiar estdo de cheque\n* --  JHTORRES 15.07.2005 validar primero que cheque este\n* --                      pagado por camara para llamar\n* --                      OBS10005\n* --  WGUERRE  07.03.2006\n* --  Si es cuenta de chq. de gerencia no debe entrar a\n* --  consulta estado del cheque\nIF NUM-CTA      OF T12INC06 NOT EQUAL 0\nPERFORM A2550-CONSULTAR-ESTADO-CHEQUE\n\ndisplay 'CAB1040 -ESTADO-CHQ '\nCOD-EST-SOP OF MSG-OUT-OBS10002\n\nIF COD-EST-SOP OF MSG-OUT-OBS10002 EQUAL '89'\nPERFORM A2600-ACTUALIZA-ESTADO-CHEQUE\nEND-IF\nEND-IF\n* --  JHTORRES 01.06.2005\n* --  FSALAZAR-END-28/01/2009.\n\nINITIALIZE S21-AREA-ERROR\n\nEND-IF.\n\n* --  WGUERRE  16.08.2004\n* --  Se elimina la rearrancabilidad, y se adiciona el commit\n* --  normal, ya que el cursor automaticamente comienza donde\n* --  se quedo.\n* --  Se elimina porque este proceso es abierto en N procesos\nEXEC SQL COMMIT END-EXEC.\nMOVE SQLSTATE TO SQLSTATE-SIGLO.\n\nIF  NOT IND-SQL-CORRECTO\nMOVE LT-ERR-CLOSE-CURSOR-PEND TO WS-TEXTO\nMOVE LT-A-PARRAFO1700         TO WS-PARRAFO\n@LOGERR(ERROR,LT-N-21016,AREA-INFORMACION)\nPERFORM A9100-ROLLBACK\n@ERROR(ERROR,SQLCODE,AREA-INFORMACION)\nEND-IF.\n\n\n*      @GXCOMMIT().\nIF WS-CONT-LEIDOS IS NOT NUMERIC\nMOVE ZERO     TO WS-CONT-LEIDOS.\nIF WS-CONT-MODIFI IS NOT NUMERIC\nMOVE ZERO     TO WS-CONT-MODIFI.\n\nPERFORM A1600-LEER-PENDIENTES.\n\n\n* ***************************************************************\n* * -SE FORMATEA EL MENSAJE DE ENTRADA DEL SERVICIO OBS20007   **\n* *  PARA LA MODIFICACION DE LA TABLA DE INCIDENCIAS           **\n* ***************************************************************\nA2100-FORMATEAR-OBS20007.\ndisplay 'A2100 -FORMAT OBS20007 '.\n\nMOVE CORR T12INC06\nTO OBREGINT             OF MSG-IN-OBS20007.\n\nMOVE LT-DEBE\nTO IND-NATURALEZA       OF MSG-IN-OBS20007.\n\nMOVE WS-LT-DEVUELTO\nTO COD-EST-INCID        OF MSG-IN-OBS20007.\n\nMOVE FEC-VENCIMIENTO      OF T12INC06\nTO FEM-VENCIMIENTO      OF MSG-IN-OBS20007.\n\nMOVE FEC-OPERACION        OF T12INC06\nTO FEM-OPERACION        OF MSG-IN-OBS20007.\n\nMOVE FEC-VALOR            OF T12INC06\nTO FEM-VALOR            OF MSG-IN-OBS20007.\n\nMOVE IMP-MOVIMIENTO       OF T12INC06\nTO IMPMOVIMIENTO        OF MSG-IN-OBS20007.\n\nMOVE FEC-EMISION          OF T12INC06\nTO FEM-EMISION          OF MSG-IN-OBS20007.\n\nMOVE FEM-MAQUINA          OF S21-AREA-ENTORNO\nTO FEM-RESOL            OF MSG-IN-OBS20007.\n\nMOVE LT-N-INCORRIENTE\nTO COD-RESOL            OF MSG-IN-OBS20007.\n\nMOVE COD-DOMINIO          OF S21-AREA-ENTORNO\nTO COD-DOMINIO          OF MSG-IN-OBS20007.\n\nMOVE NUM-NODO             OF S21-AREA-ENTORNO\nTO NUM-NODO             OF MSG-IN-OBS20007.\n\nMOVE NUM-MENSAJE          OF S21-AREA-ENTORNO\nTO NUM-MENSAJE          OF MSG-IN-OBS20007.\n\nMOVE WS-A-PROGRAMA\nTO COD-USUARIO-RES      OF MSG-IN-OBS20007.\n\nMOVE HOR-MAQUINA          OF S21-AREA-ENTORNO\nTO WS-HORA6-AUX.\n\nMOVE WS-HORA6             TO WS-HORA8.\nMOVE WS-MINUTOS6          TO WS-MINUTOS8.\nMOVE WS-SEGUNDOS6         TO WS-SEGUNDOS8.\n\nMOVE WS-HORA8-AUX\nTO HOR-RESOL            OF MSG-IN-OBS20007.\n\nMOVE DEL-CONCEPTO         OF T12INC06\nTO DEL-CONCEPTO2        OF MSG-IN-OBS20007.\n\nMOVE FEC-VALOR            OF T12INC06\nTO FEM-VALOR2           OF MSG-IN-OBS20007.\n\nMOVE COD-REFER            OF T12INC06\nTO COD-REFERENCIA2      OF MSG-IN-OBS20007.\n\nMOVE SPACES\nTO COD-CENT-FTRAS       OF MSG-IN-OBS20007\nCOD-ENT-CT-RES       OF MSG-IN-OBS20007.\n\nMOVE ZEROS\nTO COD-SUC-CT-RES       OF MSG-IN-OBS20007\nCOD-CLV-RESOL        OF MSG-IN-OBS20007\nNUM-CTA-RES          OF MSG-IN-OBS20007.\n\nMOVE IMP-MOVIMIENTO       OF T12INC06\nTO IMP-RESOL            OF MSG-IN-OBS20007.\n\nMOVE COD-MONEDA           OF T12INC06\nTO D-IMP-RESOL          OF MSG-IN-OBS20007.\n\nMOVE '01.01.0001'\nTO F-IMP-RESOL          OF MSG-IN-OBS20007.\n\nMOVE LT-B\nTO CLA-RESOL            OF MSG-IN-OBS20007.\n\nMOVE ZEROS\nTO COD-OPER-ENC         OF MSG-IN-OBS20007.\n\nMOVE TIMESTAMP-SIGLO      OF T12INC06\nTO TIMESTAMP-SIGLOM     OF MSG-IN-OBS20007.\n\nMOVE '1' TO IND-ENVIO-INF OF MSG-IN-OBS20007.\n\nSET  RESOL-TOTAL          TO TRUE.\n\n\n* ***************************************************************\n* * -SE OBTIENE LA FECHA DE DEVOLUCION DEL CHEQUE DE T30DOR10  **\n* *  PARA SER INFORMADO AL SERVICIO CAS10010 DE ACTUALIZACION  **\n* *  DE CHEQUES RECIBIDOS PARA SER DEVUELTOS.                  **\n* ***************************************************************\nA2150-LEER-FECHA-DEVOL.\ndisplay 'A2150- FEC-DV -> NoINCID ' NUM-INCID OF T12INC06\n'FEC-VENC ' FEC-VENCIMIENTO  OF T12INC06\n\nMOVE NUM-INCID            OF T12INC06\nTO NUM-INCID            OF T30DOR10\n\nMOVE FEC-VENCIMIENTO      OF T12INC06\nTO FEC-ABONO-CEDENTE    OF T30DOR10\n\nEXEC SQL\nSELECT FEC_DEVOLUCION,\nCOD_DOMINIO,\nNUM_NODO,\nNUM_OPERACION\nINTO :T30DOR10.FEC-DEVOLUCION,\n:T30DOR10.COD-DOMINIO,\n:T30DOR10.NUM-NODO,\n:T30DOR10.NUM-OPERACION\nFROM T30DOR10\nWHERE NUM_INCID         = :T30DOR10.NUM-INCID\nAND FEC_ABONO_CEDENTE = :T30DOR10.FEC-ABONO-CEDENTE\nEND-EXEC.\n\nMOVE SQLSTATE  TO SQLSTATE-SIGLO.\ndisplay 'A2150 -RC-T30DOR10 ' SQLCODE ' ' SQLSTATE.\n\nEVALUATE TRUE\nWHEN IND-SQL-CORRECTO\nCONTINUE\n\nWHEN IND-NO-ENCONTRADO\n* -->          WGUERRE  27.09.2004\n* --           Si no encuentra registro se pone como fecha de\n* --           devolucion la misma del vencimiento, ya que si\n* --           tiene 01.01.0001 no sale en el DEVUCAM\nMOVE LT-FECHA-MINIMA TO FEC-DEVOLUCION OF T30DOR10\nMOVE FEC-VENCIMIENTO                   OF T12INC06\nTO FEC-DEVOLUCION                    OF T30DOR10\n\nWHEN OTHER\ndisplay '** Erro al leer incidencia en dor10: '\nnum-incid of t30dor10\n\nMOVE LT-A-PARRAFO2150         TO WS-PARRAFO\nMOVE LT-ERROR-SELECT-T30DOR10 TO WS-TEXTO\n@LOGERR(ERROR,LT-N-21016,AREA-INFORMACION)\nPERFORM A9100-ROLLBACK\n@ERROR(ERROR,SQLCODE,AREA-INFORMACION)\nEND-EVALUATE.\n\n\n* ***************************************************************\n* * -SE FORMATEA EL MENSAJE DE ENTRADA DEL SERVICIO CAS10010   **\n* ***************************************************************\nA2200-FORMATEAR-CAS10010.\ndisplay 'A2200 -DATOS CAS10010 '\n\nPERFORM A2150-LEER-FECHA-DEVOL\n\nMOVE FEC-DEVOLUCION       OF T30DOR10\nTO FEC-DEVOLUCION       OF MSG-IN-CAS10010.\n\nMOVE FEC-OPERACION        OF T12INC06\nTO FEC-PRESENT          OF MSG-IN-CAS10010.\n\nMOVE COD-ENTIDAD          OF T12INC06\nTO COD-ENTIDAD          OF MSG-IN-CAS10010.\n\nMOVE COD-SUC-DOM          OF T12INC06\nTO COD-CENT-DES         OF MSG-IN-CAS10010.\n\nMOVE NUM-CTA-DOM          OF T12INC06\nTO NUM-SEC-EFE          OF MSG-IN-CAS10010.\n\n*  -- Se informa el motivo de la Incidencia (corresponde a los 2\n*  -- primeros caracteres de TXT-BENEF) como Codigo de Devolucin\nMOVE TXT-BENEF            OF T12INC06 (1:2)\nTO COD-DEV              OF MSG-IN-CAS10010.\n\nMOVE ZEROS\nTO IMP-PAGO-PARCIAL     OF MSG-IN-CAS10010.\n\nMOVE COD-MONEDA           OF T12INC06\nTO COD-MONEDA           OF MSG-IN-CAS10010.\n\nMOVE WS-LT-PTE-DEVOL\nTO COD-ESTDOC           OF MSG-IN-CAS10010.\n\nMOVE NUM-INCID            OF T12INC06\nTO NUM-INCID            OF MSG-IN-CAS10010.\n\nIF COD-DOMINIO OF T30DOR10 NOT NUMERIC\nMOVE ZEROS\nTO COD-DOMINIO          OF MSG-IN-CAS10010\nELSE\nMOVE COD-DOMINIO          OF T30DOR10\nTO COD-DOMINIO          OF MSG-IN-CAS10010\nEND-IF\n\nIF NUM-NODO OF T30DOR10 NOT NUMERIC\nMOVE ZEROS\nTO NUM-NODO             OF MSG-IN-CAS10010\nELSE\nMOVE NUM-NODO             OF T30DOR10\nTO NUM-NODO             OF MSG-IN-CAS10010\nEND-IF\n\nIF NUM-OPERACION OF T30DOR10 NOT NUMERIC\nMOVE ZEROS\nTO NUM-OPERACION        OF MSG-IN-CAS10010\nELSE\nMOVE NUM-OPERACION        OF T30DOR10\nTO NUM-OPERACION        OF MSG-IN-CAS10010\nEND-IF.\n\n\n* ***************************************************************\n* * SE ESCRIBE EN RAD                                          **\n* ***************************************************************\nA2300-GRABAR-RAD.\ndisplay 'A2300 -GRABAR RAD PAS43003'\n* ----> Indicador de pago en efectivo.\nMOVE ZEROS\nTO IND-PAGO-EFEC        OF MSG-IN-PAS43003.\n\n* ----> Codigo de centro origen de la operacion.\nMOVE WS-CENTRO\nTO COD-CENT-ORIG        OF MSG-IN-PAS43003.\n\n* ----> Codigo de operacion(resolucion de intercambio)\nMOVE LT-A-40502\nTO COD-OPERACION        OF MSG-IN-PAS43003.\n\n* ----> Codigo destino final\nMOVE WS-COD-DESFI\nTO COD-DESFI            OF MSG-IN-PAS43003.\n\n* ----> Concepto destino final\nMOVE LT-CONCEPTO-DEVOL\nTO DEL-CONCEPTO         OF MSG-IN-PAS43003.\n\n* ----> Indicador de naturaleza.\nMOVE LT-DEBE\nTO IND-NATURALEZA       OF MSG-IN-PAS43003.\n\n* ----> Centro destino de la operacion (compensacion).\nMOVE WS-CENTRO\nTO COD-CENTIM           OF MSG-IN-PAS43003.\n\n* ----> Codigo de RAD (Identificador de la parte variable).\nMOVE LT-COD-RAD\nTO COD-RAD              OF MSG-IN-PAS43003.\n\n* ----> Fecha de valor.\nMOVE FEC-VALOR            OF T12INC06\nTO FEM-VALOR            OF MSG-IN-PAS43003.\n\n* ----> Importe de la operacion.\nMOVE IMP-PENDIENTE        OF T12INC06\nTO IMP-ORIG-OPE         OF MSG-IN-PAS43003\nIMP-CUENTA           OF MSG-IN-PAS43003.\n\n* ----> Moneda de la operacion.\nMOVE COD-MONEDA           OF T12INC06\nTO D-IMP-ORIG-OPE       OF MSG-IN-PAS43003\nD-IMP-CUENTA         OF MSG-IN-PAS43003.\n\n@INVOCAR(PAS43003,B)\n\nIF  TIPO-ERROR OF S21-AREA-ERROR NOT EQUAL ZEROS\nPERFORM A9100-ROLLBACK\n@ERROR(ERROR,)\nEND-IF.\n\n\n* ***************************************************************\n* * SE GENERA PROTESTO PARA CHEQUE DEVUELTO POR FONDOS         **\n* * INSUFICIENTES LLAMANDO AL SERVICIO CTS22014.               **\n* ***************************************************************\nA2400-GENERAR-PROTESTO.\ndisplay 'A2400 -PROTESTA CTS22014 '\n\n* --  WGUERRE  08.03.2004\n* --  Se recupera el usuario que devolvio el cheque desde la\n* --  la tabla de consideracion\nPERFORM 2410-OBTENGO-USU-CONSI\nMOVE COD-USUARIO          OF S21-AREA-ENTORNO\nTO WG-COD-USUARIO\n\nIF COD-USUARIO OF T30RCI01 EQUAL '00000000'\nIF COD-ASESOR OF T30RCI01 NOT EQUAL SPACES\nMOVE COD-ASESOR     OF T30RCI01\nTO COD-USUARIO    OF S21-AREA-ENTORNO\nEND-IF\nELSE\nMOVE COD-USUARIO       OF T30RCI01\nTO COD-USUARIO       OF S21-AREA-ENTORNO\nEND-IF.\n* --  WGUERRE  08.03.2004\n\n\nMOVE NUM-CTA              OF T12INC06\nTO WS-NUM-CUENTA\n\nMOVE WS-NUM-CTA-INT\nTO NUM-CTA-INT          OF MSG-IN-CTS22014.\n\nMOVE WS-COD-TIP-EXPE\nTO COD-TIP-EXPE         OF MSG-IN-CTS22014.\n\nMOVE COD-EMPRESA          OF T12INC06\nTO COD-EMPRESA          OF MSG-IN-CTS22014.\n\nMOVE COD-SUC-DOM          OF T12INC06\nTO COD-SUC-PROPIE       OF MSG-IN-CTS22014.\n\nMOVE COD-MONEDA           OF T12INC06\nTO COD-MONEDA           OF MSG-IN-CTS22014.\n\nMOVE NUMERO-DOCUMENTO     OF T12INC06\nTO NUM-CHEQUE           OF MSG-IN-CTS22014.\n\nMOVE IMP-MOVIMIENTO       OF T12INC06\nTO IMP-CHEQUE           OF MSG-IN-CTS22014\nIMP-PROTESTO         OF MSG-IN-CTS22014.\n\nMOVE LT-CAMARA\nTO TIPO-PROTESTO        OF MSG-IN-CTS22014.\n\nMOVE LT-ALTA\nTO ACC-SERV             OF MSG-IN-CTS22014.\n\nMOVE ZEROS\nTO SAL-DISPONIBLE       OF MSG-IN-CTS22014.\n\n\n@INVOCAR(CTS22014,A)\n\nMOVE WG-COD-USUARIO\nTO COD-USUARIO          OF S21-AREA-ENTORNO.\n\nDISPLAY 'CAB1040 RC-CTS22014 ' TIPO-ERROR OF S21-AREA-ERROR ' '\nNUM-ERROR  OF S21-AREA-ERROR.\nTIPO-ERROR OF S21-AREA-ERROR NOT EQUAL ZEROS AND\nNUM-ERROR  OF S21-AREA-ERROR NOT EQUAL LT-9615\nMOVE NUM-ERROR  OF S21-AREA-ERROR TO WS-ERROR\n*         DISPLAY 'Error llamada servicio de Protesto'\nPERFORM A9100-ROLLBACK\n@ERROR(ERROR,WS-ERROR)\nEND-IF.\n\n\n* ***************************************************************\n* * Obtengo el usuario de consideracion que devolvio el cheque **\n* * para grabarlo en la tabla de Protestos                     **\n* ***************************************************************\n2410-OBTENGO-USU-CONSI.\n\nMOVE NUM-INCID            OF T12INC06\nTO NUM-INCID            OF T30RCI01\n\nEXEC SQL\nSELECT COD_USUARIO,\nCOD_ASESOR\nINTO :T30RCI01.COD-USUARIO,\n:T30RCI01.COD-ASESOR\nFROM T30RCI01\nWHERE TO_CHAR(TIMESTAMP_SIGLO,'YYYY-MM-DD')\n<= :WS-FECHA-PROC\nAND TO_CHAR(FEC_VENCIMIENTO,'YYYY-MM-DD')\n>= :WS-FECHA-PROC\nAND NUM_INCID        = :T30RCI01.NUM-INCID\nAND IND_EST_REG      =  'A'\nEND-EXEC.\n\nMOVE SQLSTATE  TO SQLSTATE-SIGLO.\ndisplay 'A2410 -rc-T30RCI01 '  SQLCODE ' ' SQLSTATE\n' incid '  NUM-INCID   OF T30RCI01\n\nEVALUATE TRUE\nWHEN IND-SQL-CORRECTO\nCONTINUE\n\nWHEN IND-NO-ENCONTRADO\nMOVE 'CAB1040'     TO COD-USUARIO  OF T30RCI01\n\nWHEN OTHER\ndisplay 'Error en SELECT de T30RCI01 - '\n' Num-Incid ' NUM-INCID OF T30RCI01\n' - Sqlcode: ' SQLCODE\nMOVE 'CAB1040'     TO COD-USUARIO  OF T30RCI01\nEND-EVALUATE.\n\n\n*  -> JANZOLA. 2002.03.12\n* ****************************************************************\n* *  A2500-ACTUAL-ESTADO-INCIDENCIA.                            **\n* ****************************************************************\n* * SE ACTUALIZA EL ESTADO DE LA INCIDENCIA DE CONSIDERACION A  **\n* * DEVUELTO (DV).                                              **\n* ****************************************************************\nA2500-ACTUAL-ESTADO-INCID.\ndisplay 'A2500 -ACTUAL-ESTADO CAS01005'\n*  ----> Actualizar Estado de Incidencia de Consideracin\n\nINITIALIZE MSG-IN-CAS01005\nMSG-OUT-CAS01005\n\nMOVE COD-EMPRESA   OF T12INC06\nTO COD-EMPRESA   OF CA01005I OF MSG-IN-CAS01005.\n\nMOVE COD-CENT-DEST OF T12INC06\nTO COD-CEN-DEST  OF CA01005I OF MSG-IN-CAS01005.\n\nMOVE NUM-CTA       OF T12INC06\nTO NUM-CTA       OF CA01005I OF MSG-IN-CAS01005.\n\nMOVE LT-UNO\nTO NUM-REGS      OF CA01005I OF MSG-IN-CAS01005.\n\nMOVE NUM-INCID     OF T12INC06\nTO NUM-INCID     OF CA01005I OF MSG-IN-CAS01005 (LT-UNO).\n\nMOVE TIMESTAMP-SIGLO OF T12INC06\nTO TIMESTAMP-SIGLO\nOF CA01005I OF MSG-IN-CAS01005 (LT-UNO).\n\nMOVE WS-LT-PEND-RESOL\nTO COD-EST-ANT   OF CA01005I OF MSG-IN-CAS01005 (LT-UNO).\n\nMOVE WS-LT-DEVUELTO-CONSID\nTO IND-ACCION    OF CA01005I OF MSG-IN-CAS01005 (LT-UNO).\n\nMOVE LT-CHEQUE-DEVUELTO\nTO DEL-CONCEPTO  OF CA01005I OF MSG-IN-CAS01005 (LT-UNO).\n\n\n@INVOCAR(CAS01005,C).\n\ndisplay 'CAB1040 RC-CAS01005 ' NUM-ERROR OF S21-AREA-ERROR\n' ' TIPO-ERROR OF S21-AREA-ERROR.\n\n\n* ****************************************************************\n* * A2550-CONSULTAR-ESTADO-CHEQUE           JHTORRES 2005/07/15 **\n* ****************************************************************\n* * SE LLAMA AL SERVICIO DE CONSULTA DE DATOS DEL CHEQUE PARA   **\n* * PODER CONOCER EL ESTADO DEL SOPORTE.                        **\n* ****************************************************************\nA2550-CONSULTAR-ESTADO-CHEQUE.\nDISPLAY 'CAB1040 A2550- : ' NUM-CTA OF T12INC06 ' - '\nWS-NUM-CHEQUE.\n\nMOVE NUM-CTA              OF T12INC06\nTO WS-NUM-CUENTA\n\n* -> JHTORRES 2006-02-17\n* ->          Separo numero de cheque\nPERFORM A2610-OBT-COD-PRIM-SEC.\n* -> JHTORRES 2006-02-17\n\nMOVE COD-PRIM-SOP         OF  T12TAL17\nTO COD-PRIM-SOP         OF MSG-IN-OBS10002.\n\nMOVE COD-SEC-SOP          OF T12TAL17\nTO COD-SEC-SOP          OF MSG-IN-OBS10002.\n\n* -> JHTORRES 2006-02-16\n* ->          BUSCAMOS DIGITO VERIFICADOR DEL CHEQUE\nPERFORM A2551-OBT-DIG-CONTR-CH.\n* -> JHTORRES 2006-02-16\n\n\nMOVE DIG-CONTROL1         OF MSG-OUT-OBS11007\nTO NUM-CHEQUE-DIGIT     OF MSG-IN-OBS10002.\n\nMOVE WS-NUM-CHEQUE\nTO NUM-CHEQUE           OF MSG-IN-OBS10002.\n\nMOVE COD-EMPRESA          OF T12INC06\nTO COD-EMPRESA          OF MSG-IN-OBS10002.\n\nMOVE WS-NUM-CTA-INT\nTO NUM-CTA-INT          OF MSG-IN-OBS10002.\n\nMOVE WS-COD-TIP-EXPE\nTO COD-TIP-EXPE         OF MSG-IN-OBS10002.\n\n\n@INVOCAR(OBS10002,B).\n\nIF TIPO-ERROR OF S21-AREA-ERROR NOT = ZEROS\nMOVE 'A2550-'          TO WS-PARRAFO\nMOVE 'ERROR-OBS10002'  TO WS-TEXTO\nPERFORM A9100-ROLLBACK\n@ERROR(ERROR,,AREA-INFORMACION)\nEND-IF.\n\n\n* ****************************************************************\n* * A2551-OBT-DIG-CONTR-CH                  JHTORRES 2006/02/16 **\n* ****************************************************************\nA2551-OBT-DIG-CONTR-CH.\nDISPLAY 'CAB1040 A2551- : '\nNUM-CTA        OF T12INC06 ' - '\nWS-NUM-CHEQUE ' - '\nCOD-PRIM-SOP   OF T12TAL17 ' - '\nCOD-SEC-SOP    OF T12TAL17.\n\nSET RECU OF ACC-SERV OF MSG-IN-OBS11007 TO TRUE\n\nMOVE COD-PRIM-SOP       OF T12TAL17\nTO COD-PRIM-SOP OF MSG-IN-OBS11007\n\nMOVE COD-SEC-SOP        OF T12TAL17\nTO COD-SEC-SOP  OF MSG-IN-OBS11007\n\nMOVE '0000'        TO COD-IDENTIFICADOR OF MSG-IN-OBS11007\n\nMOVE WS-NUM-CHEQUE\nTO NUM-CHEQUE   OF MSG-IN-OBS11007\n\n\n@INVOCAR(OBS11007,D)\n\nIF TIPO-ERROR OF S21-AREA-ERROR NOT = ZEROS\nMOVE 'A2551-'          TO WS-PARRAFO\nMOVE 'ERROR-OBS11007'  TO WS-TEXTO\nPERFORM A9100-ROLLBACK\n@ERROR(ERROR,,AREA-INFORMACION)\nEND-IF.\n\n\n* ****************************************************************\n* * A2600-ACTUALIZA-ESTADO-CHEQUE           JHTORRES 2005/06/01 **\n* ****************************************************************\n* * SE ACTUALIZA ESTADO DEL CHEQUE LLALAMDO AL SERVICIO OBS10005**\n* ****************************************************************\nA2600-ACTUALIZA-ESTADO-CHEQUE.\ndisplay 'CAB1040 -A2600 ACTUAL CHQ OBS10005 '.\n\nINITIALIZE  MSG-IN-OBS10005.\nINITIALIZE  MSG-OUT-OBS10005 REPLACING ALPHANUMERIC DATA\nBY SPACES  NUMERIC DATA BY ZEROS.\n\nMOVE COD-PRIM-SOP        OF  T12TAL17\nTO COD-PRIM-SOP        OF  MSG-IN-OBS10005.\n\nMOVE COD-SEC-SOP         OF  T12TAL17\nTO COD-SEC-SOP         OF  MSG-IN-OBS10005.\n\nMOVE WS-NUM-CHEQUE\nTO NUM-TALONARIO       OF  MSG-IN-OBS10005.\n\nMOVE COD-EMPRESA         OF  T12INC06\nTO COD-EMPRESA         OF  MSG-IN-OBS10005.\n\nMOVE COD-SUCURSAL        OF  T12INC06\nTO COD-CENTRO          OF  MSG-IN-OBS10005.\n\nMOVE WS-NUM-CTA-INT\nTO NUM-CTA-INT         OF  MSG-IN-OBS10005.\n\nMOVE WS-COD-TIP-EXPE\nTO COD-TIP-EXPE        OF  MSG-IN-OBS10005.\n\nMOVE COD-MONEDA          OF  T12INC06\nTO COD-MONEDA-CTA      OF  MSG-IN-OBS10005.\n\nSET ACTIVADO  OF  MSG-IN-OBS10005  TO  TRUE.\n\nMOVE WS-COD-CENTRO\nTO COD-CENT-BAJA       OF  MSG-IN-OBS10005\nCOD-CENT-ALTA       OF  MSG-IN-OBS10005.\n\nMOVE FEM-MAQUINA         OF  S21-AREA-ENTORNO\nTO FEM-VENCIMIENTO     OF  MSG-IN-OBS10005\nFEM-ALTA            OF  MSG-IN-OBS10005\nFEM-BAJA            OF  MSG-IN-OBS10005.\n\nMOVE '01.01.0001'\nTO FEM-VENCIMIENTO2    OF  MSG-IN-OBS10005.\n\nMOVE IMP-MOVIMIENTO      OF  T12INC06\nTO IMP-CHEQUE          OF  MSG-IN-OBS10005.\n\nPERFORM A2620-OBT-TIMESTAMP-CTA\n\nMOVE TIMESTAMP-SIGLOM    OF  MSG-OUT-CTS10028\nTO TIMESTAMP-SIGLOM    OF  MSG-IN-OBS10005.\n\n\n@INVOCAR(OBS10005,B)\n\nDISPLAY 'CAB1040 A2600-ACTUALIZA DESPUES OBS10005: '\nTIPO-ERROR       OF  S21-AREA-ERROR ' - '\nNUM-ERROR        OF  S21-AREA-ERROR ' - '\nNUM-CTA          OF T12INC06        ' - '\nWS-NUM-CHEQUE                       ' - '\nCOD-PRIM-SOP     OF T12TAL17        ' - '\nCOD-SEC-SOP      OF T12TAL17\n\nIF  TIPO-ERROR OF S21-AREA-ERROR NOT EQUAL ZEROS\nMOVE 'A2600-'          TO WS-PARRAFO\nMOVE 'ERROR-OBS10005'  TO WS-TEXTO\nPERFORM A9100-ROLLBACK\n@ERROR(ERROR,,AREA-INFORMACION)\nEND-IF.\n\n\n* ****************************************************************\n* * A2610-OBT-COD-PRIM-SEC                  JHTORRES 2005/06/01 **\n* ****************************************************************\n* *  LEE LA TABLA T12TAL17 PARA OBTENER EL CODIGO PRIMARIO Y    **\n* *  SECUNDARIO DE SOPORTE.                                     **\n* ****************************************************************\nA2610-OBT-COD-PRIM-SEC.\n\nMOVE COD-EMPRESA        OF  T12INC06\nTO  COD-EMPRESA    OF T12TAL17\n\nMOVE WS-COD-TIP-EXPE    TO  COD-TIP-EXPE   OF T12TAL17\n\nMOVE WS-NUM-CTA-INT     TO  NUM-CTA-INT    OF T12TAL17\n\nMOVE NUMERO-DOCUMENTO   OF  T12INC06\nTO  WS-NUMERO-DOCUMENTO\n\nMOVE WS-NUM-CHEQUE      TO  NUM-CHEQUE     OF T12TAL17\nNUM-CHEQUE-FIN OF T12TAL17\n\nEXEC SQL\nSELECT  COD_PRIM_SOP,\nCOD_SEC_SOP\nINTO :T12TAL17.COD-PRIM-SOP,\n:T12TAL17.COD-SEC-SOP\nFROM  T12TAL17\nWHERE  COD_EMPRESA    =  :T12TAL17.COD-EMPRESA\nAND  COD_TIP_EXPE   =  :T12TAL17.COD-TIP-EXPE\nAND  NUM_CTA_INT    =  :T12TAL17.NUM-CTA-INT\nAND  NUM_CHEQUE     <= :T12TAL17.NUM-CHEQUE\nAND  NUM_CHEQUE_FIN >= :T12TAL17.NUM-CHEQUE-FIN\nEND-EXEC\n\nMOVE SQLSTATE TO SQLSTATE-SIGLO\ndisplay 'CAB1040 A2610-RC-T12TAL17 ' SQLCODE ' ' SQLSTATE.\nIF  NOT IND-SQL-CORRECTO\nDISPLAY ' CAB1040 Erro al leer soporte T12TAl17: '\nWS-NUM-CUENTA\nMOVE 'A2610-'                 TO WS-PARRAFO\nMOVE 'ERROR-SELECT-T12TAL17'  TO WS-TEXTO\n@LOGERR(ERROR,SQLCODE,AREA-INFORMACION)\nPERFORM A9100-ROLLBACK\n@ERROR(ERROR,SQLCODE,AREA-INFORMACION)\nEND-IF.\n\n\n* ****************************************************************\n* * A2620-OBT-TIMESTAMP-CTA                 JHTORRES 2005/06/01 **\n* ****************************************************************\n* *  LLAMA AL SERVICIO CTS10028, PARA OBTENER EL TIMESTAMP DE   **\n* *  LA CUENTA.                                                 **\n* ****************************************************************\nA2620-OBT-TIMESTAMP-CTA.\ndisplay 'CAB1040 -A2620-OBT-TIMESTAMP-CTA '\nWS-NUM-CTA-INT  ' Exp: ' WS-COD-TIP-EXPE.\n\nMOVE  WS-NUM-CTA-INT\nTO  NUM-CTA-INT       OF MSG-IN-CTS10028\n\nMOVE  WS-COD-TIP-EXPE\nTO  COD-TIP-EXPE      OF MSG-IN-CTS10028\n\nMOVE  COD-EMPRESA       OF  T12INC06\nTO  COD-EMPRESA       OF MSG-IN-CTS10028\n\n\n@INVOCAR(CTS10028,B)\n\nIF  TIPO-ERROR OF S21-AREA-ERROR NOT EQUAL ZEROS\nMOVE 'A2620-'           TO WS-PARRAFO\nMOVE 'ERROR-CTS10028 '  TO WS-TEXTO\nPERFORM A9100-ROLLBACK\n@ERROR(ERROR,,AREA-INFORMACION)\nEND-IF.\n\n\n* ***************************************************************\n* * SE ESCRIBE EN EL LISTADO EL AVISO                          **\n* ***************************************************************\nA3000-OBTENER-LISTADO.\ndisplay 'CAB1040 -A3000 IMPRESOS '\n\nIF WS-IMPRES = ZEROS\nOPEN OUTPUT IMPRES02\nMOVE 1 TO WS-IMPRES\nEND-IF.\n\n* ----> Se obtiene la empresa y su descripcion.\nPERFORM A3100-OBTENER-DESC-EMPRESA.\n\nMOVE NOMBRE               OF TL-T06TC005(1) TO ENTIDAD-A.\nMOVE WS-COD-EMPRESA       TO ENTIDAD-N.\n\n* ----> Se obtiene la descripcion del centro responsable\nMOVE WS-COD-CENT-COMP     TO CABE-CENT-RESP.\n\nPERFORM A3200-OBTENER-ENT-REMITENTE.\n\nIF WS-NUM-LINEAS > 64\nPERFORM A3300-CABECERA-LISTADO\nEND-IF.\n\nADD 1 TO WS-NUM-LINEAS.\nWRITE RECORD-PRN2 FROM DET-1 AFTER 1.\n\nADD 1 TO WS-NUM-LINEAS.\nWRITE RECORD-PRN2 FROM DET-2 AFTER 1.\n\n\n* ***************************************************************\n* *  SE LLAMA AL SERVICIO DE TCS05002 PARA LA OBTENCION DE LA  **\n* *  DESCRIPCION DE LA EMPRESA.                                **\n* ***************************************************************\nA3100-OBTENER-DESC-EMPRESA.\ndisplay 'A3100- EMPRE-TCS05002 '.\nMOVE 'V'\nTO ACC-SERV             OF MSG-IN-TCS05002.\n\nMOVE '0'\nTO IND-TIPO-LIS         OF MSG-IN-TCS05002.\n\nMOVE 1\nTO NUM-CLAVE            OF MSG-IN-TCS05002.\n\nMOVE 1\nTO NUM-CONDICION-ADICIONAL OF MSG-IN-TCS05002.\n\nMOVE COD-EMPRESA          OF S21-AREA-ENTORNO\nTO COD-EMPRESA          OF MSG-IN-TCS05002.\n\n@INVOCAR(TCS05002,B)\n\nIF  TIPO-ERROR OF S21-AREA-ERROR NOT EQUAL ZEROS\nMOVE LT-A-PARRAFO3100  TO WS-PARRAFO\nMOVE LT-ERROR-TCS05002 TO WS-TEXTO\nMOVE NUM-ERROR OF S21-AREA-ERROR  TO WS-ERROR\nPERFORM A9100-ROLLBACK\n@ERROR(ERROR,WS-ERROR,AREA-INFORMACION)\nEND-IF.\n\n\n* ***************************************************************\n* *  SE OBTIENE EL DEPARTAMENTO DE COMPENSACION Y DESCRIPCION  **\n* *  PARA LA CABECERA DEL LISTADO.                             **\n* ***************************************************************\nA3200-OBTENER-ENT-REMITENTE.\ndisplay 'A3200-OBTENER-ENT-REMI-TCS07002 '.\n\n* ----> Se accede al servicio validacion de centro para obtener\n* ----> la descripcion del centro responsable\n\nMOVE 'V'\nTO ACC-SERV             OF MSG-IN-TCS07002.\n\nMOVE '0'\nTO IND-TIPO-LIS         OF MSG-IN-TCS07002.\n\nMOVE 1\nTO NUM-CLAVE            OF MSG-IN-TCS07002.\n\nMOVE COD-EMPRESA          OF S21-AREA-ENTORNO\nTO COD-EMPRESA          OF MSG-IN-TCS07002.\n\nMOVE WS-COD-CENT-COMP\nTO COD-CENTRO           OF MSG-IN-TCS07002.\n\n\n@INVOCAR(TCS07002,C)\n\nIF  TIPO-ERROR OF S21-AREA-ERROR NOT = ZEROS\nMOVE NUM-ERROR OF S21-AREA-ERROR  TO WS-ERROR\n@LOGERR(ERROR,WS-ERROR)\nPERFORM A9100-ROLLBACK\n@ERROR(ERROR,WS-ERROR)\nEND-IF.\n\nMOVE NOMBRE               OF MSG-OUT-TCS07002(1)\nTO CABE-DEL-CENT.\n\n\n* ***************************************************************\n* * SE ESCRIBE LA CABECERA DEL LISTADO DE ERRORES.             **\n* ***************************************************************\nA3300-CABECERA-LISTADO.\ndisplay 'A3300-CABEZON '\n\nMOVE 7                    TO WS-NUM-LINEAS.\nADD  1                    TO WS-CONTA-PAGINA.\nMOVE WS-CONTA-PAGINA      TO PAGINA  OF CABE-4.\n\nMOVE FEM-MAQUINA          OF S21-AREA-ENTORNO\nTO DATUM                OF CABE-2.\n\nMOVE HOR-MAQUINA          OF S21-AREA-ENTORNO\nTO WS-TIEMPO.\n\nMOVE WS-HORA              TO HOURS   OF CABE-3.\nMOVE WS-MINUTOS           TO MINUTES OF CABE-3.\nMOVE WS-SEGUNDOS          TO SECONDS OF CABE-3.\n\nWRITE RECORD-PRN2 FROM CABE-1 AFTER ADVANCING PAGE.\nWRITE RECORD-PRN2 FROM CABE-2 AFTER 1.\nWRITE RECORD-PRN2 FROM CABE-3 AFTER 1.\nWRITE RECORD-PRN2 FROM CABE-4 AFTER 1.\nWRITE RECORD-PRN2 FROM CABE-5 AFTER 1.\nWRITE RECORD-PRN2 FROM CABE-6 AFTER 1.\nWRITE RECORD-PRN2 FROM CABE-7 AFTER 1.\n\n\n* ***************************************************************\n* * -SE CIERRA EL CURSOR DE LOS CHEQUES \"PENDIENTES\"           **\n* *  O  \"VENCIDO PENDIENTE\".                                   **\n* * -SI ESTA ABIERTO EL FICHERO DE ERRORES, SE CIERRA.         **\n* * -SE CIERRA LA FICHA DE JCL.                                **\n* * -SE ESCRIBEN ESTADISTICAS DE CAB1040.                      **\n* * -SE CIERRA LISTADO.                                        **\n* ***************************************************************\n8000-FINAL.\ndisplay '8000-FINAL '.\n\nPERFORM A1700-CERRAR-CURSOR-PEND.\n\nIF WS-IMPRES = ZEROS\nCONTINUE\nELSE\nCLOSE IMPRES02\nEND-IF.\n\nPERFORM A8100-ESCRIBIR-ESTADIST.\n\nCLOSE IMPRES01.\n\n\n* --  -Para que queden inializados en en la tabla de rearranque.\nMOVE ZERO     TO WS-CONT-LEIDOS.\nMOVE ZERO     TO WS-CONT-MODIFI.\n\nIF  RETURN-CODE   <=  LT-N-4\nEXEC SQL COMMIT END-EXEC\n* DEBUG: -IF.\n\nGOBACK.\n\n\n* ***************************************************************\n* * SE ESCRIBEN LAS CABECERAS Y EL DETALLE DEL LISTADO.        **\n* ***************************************************************\nA8100-ESCRIBIR-ESTADIST.\ndisplay 'A8100-ESCRIBE-ESTD '\n\nWRITE REG-IMPRES01 FROM CABE-1  AFTER ADVANCING PAGE.\nWRITE REG-IMPRES01 FROM CABE-2E AFTER 1.\nWRITE REG-IMPRES01 FROM CABE-3E AFTER 1.\nWRITE REG-IMPRES01 FROM CABE-4E AFTER 1.\nWRITE REG-IMPRES01 FROM CABE-5E AFTER 1.\n\nMOVE WS-CONT-LEIDOS  TO REG-LEIDOS.\nMOVE WS-CONT-MODIFI  TO REG-DEVUELTOS.\n\nWRITE REG-IMPRES01 FROM DET-LEIDOS.\nWRITE REG-IMPRES01 FROM DET-DEVUELTOS.\n\n\n* ***************************************************************\n* * SE EFECTUA ROLLBACK                                        **\n* ***************************************************************\nA9100-ROLLBACK.\ndisplay 'A9100-ROLLBACK '\n\nEXEC SQL\nROLLBACK\nEND-EXEC.\n\nMOVE SQLSTATE TO SQLSTATE-SIGLO.\n\nIF  NOT IND-SQL-CORRECTO\nMOVE LT-A-PARRAFO9100  TO WS-PARRAFO\nMOVE LT-ERROR-ROLLBACK TO WS-TEXTO\n@ERROR(ERROR,SQLCODE,AREA-INFORMACION)\nEND-IF.\n\n",
+    "total_performs_in_ir": 47,
+    "performs_by_type": {
+      "SIMPLE": 46,
+      "UNTIL": 1
+    },
+    "main_performs_found": [
+      "1000-INICIO",
+      "2000-PROCESO UNTIL NO-ENCONTRADO",
+      "8000-FINAL"
+    ]
+  },
+  "main_performs_status": {
+    "1000-INICIO": {
+      "found_in_cobol": true,
+      "found_in_ir": true,
+      "status": "OK"
+    },
+    "2000-PROCESO": {
+      "found_in_cobol": true,
+      "found_in_ir": true,
+      "status": "OK"
+    },
+    "8000-FINAL": {
+      "found_in_cobol": true,
+      "found_in_ir": true,
+      "status": "OK"
+    }
+  },
+  "missing_performs": [],
+  "validation_summary": {
+    "total_expected": 47,
+    "total_in_ir": 47,
+    "main_performs_missing": 0,
+    "migration_rate": 100.0,
+    "main_performs_rate": 100.0,
+    "overall_status": "PASS"
+  }
+}

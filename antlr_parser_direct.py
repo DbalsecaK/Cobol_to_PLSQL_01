@@ -476,25 +476,17 @@ class CobolToIRParserDirect:
                     exec_sql_buffer = []
                 continue
             
-            # Parsear sentencias PERFORM (pueden estar en PROCEDURE DIVISION)
-            if in_procedure_division and not in_exec_sql and 'PERFORM' in processed_line.upper():
-                perform_info = self._parse_perform_statement(processed_line)
-                if perform_info:
-                    self.perform_statements.append(perform_info)
-                    
-                    # Asociar al procedimiento actual si existe
-                    if current_procedure:
-                        perform_info["procedure"] = current_procedure["name"]
-                        current_procedure["statements"].append({
-                            "op": "PERFORM",
-                            "raw": perform_info["raw"],
-                            "details": perform_info
-                        })
-                    
-                    print(f"🔄 PERFORM procesado: {perform_info['perform_type']} -> {perform_info.get('target', 'N/A')}")
-            
-            # Parsear TODOS los comandos COBOL en PROCEDURE DIVISION
+            # Parsear TODOS los comandos COBOL en PROCEDURE DIVISION (incluyendo PERFORM)
             if in_procedure_division and not in_exec_sql and processed_line.strip():
+                # Primero verificar si es un PERFORM para parsing específico
+                perform_info = None
+                if 'PERFORM' in processed_line.upper():
+                    perform_info = self._parse_perform_statement(processed_line)
+                    if perform_info:
+                        self.perform_statements.append(perform_info)
+                        print(f"🔄 PERFORM procesado: {perform_info['perform_type']} -> {perform_info.get('target', 'N/A')}")
+                
+                # Luego parsear como statement COBOL general
                 cobol_statement = self._parse_cobol_statement(processed_line)
                 if cobol_statement:
                     # Agregar al array global
@@ -504,11 +496,20 @@ class CobolToIRParserDirect:
                     if current_procedure:
                         cobol_statement["procedure"] = current_procedure["name"]
                         current_procedure["cobol_statements"].append(cobol_statement)
-                        current_procedure["statements"].append({
-                            "op": cobol_statement["statement_type"],
-                            "raw": cobol_statement["raw"],
-                            "details": cobol_statement["details"]
-                        })
+                        
+                        # Para PERFORM statements, usar la info específica si existe
+                        if perform_info:
+                            current_procedure["statements"].append({
+                                "op": "PERFORM",
+                                "raw": perform_info["raw"],
+                                "details": perform_info
+                            })
+                        else:
+                            current_procedure["statements"].append({
+                                "op": cobol_statement["statement_type"],
+                                "raw": cobol_statement["raw"],
+                                "details": cobol_statement["details"]
+                            })
                     
                     if len(self.cobol_statements) % 50 == 0:
                         print(f"📝 {len(self.cobol_statements)} statements COBOL procesados...")
